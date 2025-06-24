@@ -18,6 +18,17 @@
             background-color: #312e2b;
             color: #fff;
             margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .main-layout {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 20px;
+            /* Reduced gap for a tighter layout */
+            flex-wrap: wrap;
         }
 
         .game-container {
@@ -32,9 +43,19 @@
             margin-bottom: 10px;
         }
 
+        .opening-display {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+            min-height: 30px;
+            font-size: 1.4rem;
+            font-weight: 400;
+            color: #f0d9b5;
+            line-height: 1.4;
+        }
+
         .timers {
             display: none;
-            /* Hidden by default, shown via JS if timer is set */
             justify-content: space-between;
             width: 100%;
             font-size: 1.8rem;
@@ -68,6 +89,12 @@
         #game-status {
             color: #ffc107;
             font-weight: 600;
+        }
+
+        .board-and-bar-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
         }
 
         .board {
@@ -143,6 +170,34 @@
             font-family: 'Montserrat', sans-serif;
         }
 
+        /* --- Analysis Bar Styles --- */
+        .analysis-bar {
+            width: 30px;
+            height: 90vmin;
+            /* Match board height */
+            max-height: 640px;
+            /* Match board max-height */
+            background-color: #4a4a4a;
+            /* Black's advantage color */
+            border: 2px solid #666;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column-reverse;
+            /* To have white at the bottom */
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .analysis-bar-white {
+            width: 100%;
+            height: 50%;
+            /* Initial state is 50/50 */
+            background-color: #f0d9b5;
+            /* White's advantage color */
+            transition: height 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
         /* Modal Styles */
         .modal-overlay {
             position: fixed;
@@ -215,18 +270,27 @@
             <button id="start-game-btn" class="new-game-btn">Start Game</button>
         </div>
     </div>
-    <div class="game-container">
-        <div class="headLine">Chess</div>
-        <div class="timers">
-            <div id="black-timer" class="timer">10:00</div>
-            <div id="white-timer" class="timer">10:00</div>
+    <div class="main-layout">
+        <div class="game-container">
+            <div class="headLine">Chess</div>
+            <div class="opening-display" id="opening-name-display">-</div>
+            <div class="timers">
+                <div id="black-timer" class="timer">10:00</div>
+                <div id="white-timer" class="timer">10:00</div>
+            </div>
+            <div class="status-bar">
+                <div id="turn-display">White's Turn</div>
+                <div id="game-status"></div>
+                <button class="new-game-btn" onclick="showGameSetup()">New Game</button>
+            </div>
+            <!-- New container for the board and the analysis bar -->
+            <div class="board-and-bar-container">
+                <div class="board"></div>
+                <div class="analysis-bar">
+                    <div class="analysis-bar-white" id="white-advantage-bar"></div>
+                </div>
+            </div>
         </div>
-        <div class="status-bar">
-            <div id="turn-display">White's Turn</div>
-            <div id="game-status"></div>
-            <button class="new-game-btn" onclick="showGameSetup()">New Game</button>
-        </div>
-        <div class="board"></div>
     </div>
 </body>
 <script>
@@ -234,26 +298,24 @@
     const turnDisplay = document.getElementById('turn-display');
     const gameStatusDisplay = document.getElementById('game-status');
     const modal = document.getElementById('game-setup-modal');
+    const whiteAdvantageBar = document.getElementById('white-advantage-bar');
+
 
     // !!! IMPORTANT: Set this to the name of your folder containing the piece images !!!
     const imageFolderPath = 'images/';
     const pieces = {
-        'p': `PawnB.png`,
-        'r': `RookB.png`,
-        'n': `KnightB.png`,
-        'b': `BishopB.png`,
-        'q': `QueenB.png`,
-        'k': `KingB.png`,
-        'P': `PawnW.png`,
-        'R': `RookW.png`,
-        'N': `KnightW.png`,
-        'B': `BishopW.png`,
-        'Q': `QueenW.png`,
-        'K': `KingW.png`
+        'p': `PawnB.png`, 'r': `RookB.png`, 'n': `KnightB.png`, 'b': `BishopB.png`, 'q': `QueenB.png`, 'k': `KingB.png`,
+        'P': `PawnW.png`, 'R': `RookW.png`, 'N': `KnightW.png`, 'B': `BishopW.png`, 'Q': `QueenW.png`, 'K': `KingW.png`
     };
 
     const pieceValues = { 'P': 10, 'N': 30, 'B': 30, 'R': 50, 'Q': 90, 'K': 900 };
     const difficultyLevels = { easy: 1, medium: 3, hard: 4 };
+
+    const openingsDB = {
+        "1. e4": "King's Pawn Game", "1. e4 e5": "Open Game", "1. e4 e5 2. Nf3": "King's Knight Opening", "1. e4 e5 2. Nf3 Nc6": "Double King's Pawn Game", "1. e4 e5 2. Nf3 Nc6 3. Bc4": "Italian Game", "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5": "Giuoco Piano", "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. b4": "Evans Gambit", "1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6": "Two Knights Defense", "1. e4 e5 2. Nf3 Nc6 3. Bb5": "Ruy Lopez", "1. e4 e5 2. Nf3 Nc6 3. d4": "Scotch Game", "1. e4 e5 2. Nf3 Nc6 3. Nc3 Nf6": "Four Knights Game", "1. e4 e5 2. Nf3 Nf6": "Petrov's Defense", "1. e4 e5 2. Nf3 d6": "Philidor's Defense", "1. e4 e5 2. Nc3": "Vienna Game", "1. e4 e5 2. f4": "King's Gambit", "1. e4 c5": "Sicilian Defense", "1. e4 c6": "Caro-Kann Defense", "1. e4 d5": "Scandinavian Defense", "1. e4 d6": "Pirc Defense", "1. e4 e6": "French Defense", "1. e4 g6": "Modern Defense", "1. e4 Nf6": "Alekhine's Defense", "1. e4 Nc6": "Nimzowitsch Defense",
+        "1. d4": "Queen's Pawn Game", "1. d4 d5": "Queen's Pawn Game", "1. d4 d5 2. c4": "Queen's Gambit", "1. d4 d5 2. c4 dxc4": "Queen's Gambit Accepted", "1. d4 d5 2. c4 e6": "Queen's Gambit Declined", "1. d4 d5 2. c4 c6": "Slav Defense", "1. d4 d5 2. Nf3 Nf6 3. e3": "Colle System", "1. d4 d5 2. Bf4": "London System", "1. d4 d6 2. Nf3 Bg4": "Wade Defense", "1. d4 f5": "Dutch Defense", "1. d4 Nf6": "Indian Defense", "1. d4 Nf6 2. c4": "Indian Game", "1. d4 Nf6 2. c4 c5": "Benoni Defense", "1. d4 Nf6 2. c4 c5 3. d5 b5": "Benko Gambit", "1. d4 Nf6 2. c4 e5": "Budapest Gambit", "1. d4 Nf6 2. c4 e6": "Indian Game", "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4": "Nimzo-Indian Defense", "1. d4 Nf6 2. c4 e6 3. Nf3": "Indian Game", "1. d4 Nf6 2. c4 e6 3. Nf3 b6": "Queen's Indian Defense", "1. d4 Nf6 2. c4 e6 3. Nf3 Bb4+": "Bogo-Indian Defense", "1. d4 Nf6 2. c4 e6 3. g3": "Catalan Opening", "1. d4 Nf6 2. c4 g6": "King's Indian Defense", "1. d4 Nf6 2. c4 g6 3. Nc3 d5": "Grünfeld Defense", "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7": "King's Indian Defense (Main Line)", "1. d4 Nf6 2. Nf3 e6 3. Bg5": "Torre Attack",
+        "1. c4": "English Opening", "1. f4": "Bird's Opening", "1. Nf3": "Réti Opening", "1. Nf3 d5 2. g3": "King's Indian Attack"
+    };
 
     // Game State Variables
     let boardState = [];
@@ -265,6 +327,9 @@
     let gameMode = 'pvc';
     let difficulty = 'medium';
     let timeLimitInSeconds = 600;
+    let castlingRights = {};
+    let sanHistory = [];
+    let currentOpeningName = '';
 
     // Timer State
     let timers = { white: 600, black: 600 };
@@ -273,22 +338,23 @@
 
     function initializeBoardState() {
         boardState = [
-            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'], ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+            [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null],
+            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'], ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
         ];
         whiteKingPos = { row: 7, col: 4 };
         blackKingPos = { row: 0, col: 4 };
         currentPlayer = 'white';
         isGameOver = false;
         lastMove = null;
+        castlingRights = { w: { k: true, q: true }, b: { k: true, q: true } };
+        sanHistory = [];
+        currentOpeningName = '';
         gameStatusDisplay.textContent = '';
+        document.getElementById('opening-name-display').textContent = '-';
         updateTurnDisplay();
+        updateAnalysisBar();
     }
 
     function renderBoard() {
@@ -300,17 +366,13 @@
                 square.classList.add((i + j) % 2 === 0 ? "light" : "dark");
                 square.dataset.row = i;
                 square.dataset.col = j;
-
-                if (lastMove) {
-                    if ((i === lastMove.start.row && j === lastMove.start.col) || (i === lastMove.end.row && j === lastMove.end.col)) {
-                        square.classList.add('highlight-last-move');
-                    }
+                if (lastMove && ((i === lastMove.start.row && j === lastMove.start.col) || (i === lastMove.end.row && j === lastMove.end.col))) {
+                    square.classList.add('highlight-last-move');
                 }
-
                 const pieceChar = boardState[i][j];
                 if (pieceChar) {
                     const pieceElement = document.createElement('img');
-                    pieceElement.src = pieces[pieceChar];
+                    pieceElement.src =  pieces[pieceChar];
                     pieceElement.classList.add('piece');
                     pieceElement.dataset.row = i;
                     pieceElement.dataset.col = j;
@@ -371,34 +433,43 @@
 
     function movePiece(startRow, startCol, endRow, endCol) {
         const piece = boardState[startRow][startCol];
-        lastMove = { start: { row: startRow, col: startCol }, end: { row: endRow, col: endCol } };
-
+        const color = getPieceColor(piece);
+        const capturedPiece = boardState[endRow][endCol];
+        lastMove = { start: { row: startRow, col: startCol }, end: { row: endRow, col: endCol }, captured: capturedPiece, piece: piece };
+        if (piece.toUpperCase() === 'K' && Math.abs(startCol - endCol) === 2) {
+            const rookStartCol = endCol > startCol ? 7 : 0;
+            const rookEndCol = endCol > startCol ? 5 : 3;
+            const rook = boardState[startRow][rookStartCol];
+            boardState[startRow][rookEndCol] = rook;
+            boardState[startRow][rookStartCol] = null;
+        }
         if (piece.toUpperCase() === 'K') {
-            if (getPieceColor(piece) === 'white') whiteKingPos = { row: endRow, col: endCol };
+            castlingRights[color[0]].k = false;
+            castlingRights[color[0]].q = false;
+        }
+        if (piece.toUpperCase() === 'R') {
+            if (startCol === 0 && startRow === (color === 'white' ? 7 : 0)) castlingRights[color[0]].q = false;
+            if (startCol === 7 && startRow === (color === 'white' ? 7 : 0)) castlingRights[color[0]].k = false;
+        }
+        if (piece.toUpperCase() === 'K') {
+            if (color === 'white') whiteKingPos = { row: endRow, col: endCol };
             else blackKingPos = { row: endRow, col: endCol };
         }
         if (piece === 'P' && endRow === 0) boardState[endRow][endCol] = 'Q';
         else if (piece === 'p' && endRow === 7) boardState[endRow][endCol] = 'q';
         else boardState[endRow][endCol] = piece;
-
         boardState[startRow][startCol] = null;
         deselectPiece();
         renderBoard();
     }
 
     function switchTurns() {
-        if (timeLimitInSeconds > 0) {
-            stopTimer(currentPlayer);
-        }
-
+        if (timeLimitInSeconds > 0) stopTimer(currentPlayer);
+        updateHistoryAndOpening();
+        updateAnalysisBar();
         currentPlayer = (currentPlayer === 'white') ? 'black' : 'white';
-
-        if (timeLimitInSeconds > 0) {
-            startTimer(currentPlayer);
-        }
-
+        if (timeLimitInSeconds > 0) startTimer(currentPlayer);
         updateGameStatus();
-
         if (!isGameOver) {
             updateTurnDisplay();
             if (gameMode === 'pvc' && currentPlayer === 'black') {
@@ -410,14 +481,15 @@
 
     function updateGameStatus() {
         const legalMoves = getAllPossibleMoves(currentPlayer, boardState);
-
         if (legalMoves.length === 0) {
             stopTimers();
             const opponentColor = (currentPlayer === 'white') ? 'Black' : 'White';
             if (isKingInCheck(currentPlayer, boardState, whiteKingPos, blackKingPos)) {
                 gameStatusDisplay.textContent = `Checkmate! ${opponentColor} wins!`;
+                whiteAdvantageBar.style.height = (currentPlayer === 'white') ? '0%' : '100%';
             } else {
                 gameStatusDisplay.textContent = "Stalemate! It's a draw.";
+                whiteAdvantageBar.style.height = '50%';
             }
             isGameOver = true;
             turnDisplay.textContent = "Game Over";
@@ -428,137 +500,84 @@
         }
     }
 
-    // --- Game Setup and Timer Logic ---
+    // --- New Function for Analysis Bar ---
+    function updateAnalysisBar() {
+        if (isGameOver) return;
+        // The AI evaluation is from Black's perspective (positive is good for black).
+        // We negate it to get a score where positive is good for White.
+        const rawScore = -evaluateBoard(boardState);
 
-    function showGameSetup() {
-        stopTimers();
-        modal.style.display = 'flex';
+        // Convert the raw score (centipawns) to a "pawn units" score
+        const pawnScore = rawScore / 10;
+
+        // Use a sigmoid function to map the score to a 0-1 range, then scale to 0-100 for percentage.
+        // This makes the bar responsive to small changes near 0, but less sensitive to huge advantages.
+        // The scaling factor (e.g., -0.4) can be adjusted to change the bar's sensitivity.
+        const percentage = 100 / (1 + Math.exp(-0.4 * pawnScore));
+
+        whiteAdvantageBar.style.height = `${percentage}%`;
     }
 
+    // --- Game Setup and Timer Logic ---
+    function showGameSetup() { stopTimers(); modal.style.display = 'flex'; }
     document.getElementById('start-game-btn').addEventListener('click', () => {
         gameMode = document.querySelector('input[name="gameMode"]:checked').value;
         difficulty = document.getElementById('difficulty').value;
         timeLimitInSeconds = parseInt(document.getElementById('time-limit').value, 10);
-
         modal.style.display = 'none';
-
         const timersElement = document.querySelector('.timers');
-        if (timeLimitInSeconds > 0) {
-            timersElement.style.display = 'flex';
-        } else {
-            timersElement.style.display = 'none';
-        }
-
+        timersElement.style.display = timeLimitInSeconds > 0 ? 'flex' : 'none';
         startGame();
     });
-
     document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
         radio.addEventListener('change', (event) => {
             document.getElementById('difficulty-group').style.display = (event.target.value === 'pvc') ? 'block' : 'none';
         });
     });
-
     function startGame() {
         initializeBoardState();
         renderBoard();
         timers = { white: timeLimitInSeconds, black: timeLimitInSeconds };
         if (timeLimitInSeconds > 0) {
-            updateTimerDisplay('white');
-            updateTimerDisplay('black');
-            startTimer('white');
+            updateTimerDisplay('white'); updateTimerDisplay('black'); startTimer('white');
         }
     }
-
-    function formatTime(totalSeconds) {
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    function updateTimerDisplay(color) {
-        document.getElementById(`${color}-timer`).textContent = formatTime(timers[color]);
-    }
-
-    function startTimer(color) {
-        if (timerIntervals[color]) clearInterval(timerIntervals[color]);
-        timerIntervals[color] = setInterval(() => {
-            timers[color]--;
-            updateTimerDisplay(color);
-            if (timers[color] <= 0) {
-                handleTimeForfeit(color);
-            }
-        }, 1000);
-    }
-
-    function stopTimer(color) {
-        if (timerIntervals[color]) {
-            clearInterval(timerIntervals[color]);
-            timerIntervals[color] = null;
-        }
-    }
-
-    function stopTimers() {
-        stopTimer('white');
-        stopTimer('black');
-    }
-
-    function handleTimeForfeit(loserColor) {
-        stopTimers();
-        isGameOver = true;
-        const winnerColor = (loserColor === 'white' ? 'Black' : 'White');
-        gameStatusDisplay.textContent = `${winnerColor} wins on time!`;
-        turnDisplay.textContent = "Game Over";
-    }
+    function formatTime(s) { return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; }
+    function updateTimerDisplay(c) { document.getElementById(`${c}-timer`).textContent = formatTime(timers[c]); }
+    function startTimer(c) { if (timerIntervals[c]) clearInterval(timerIntervals[c]); timerIntervals[c] = setInterval(() => { timers[c]--; updateTimerDisplay(c); if (timers[c] <= 0) handleTimeForfeit(c); }, 1000); }
+    function stopTimer(c) { if (timerIntervals[c]) { clearInterval(timerIntervals[c]); timerIntervals[c] = null; } }
+    function stopTimers() { stopTimer('white'); stopTimer('black'); }
+    function handleTimeForfeit(loserColor) { stopTimers(); isGameOver = true; const winnerColor = loserColor === 'white' ? 'Black' : 'White'; gameStatusDisplay.textContent = `${winnerColor} wins on time!`; turnDisplay.textContent = "Game Over"; whiteAdvantageBar.style.height = (loserColor === 'white') ? '0%' : '100%'; }
 
     // --- AI LOGIC (MINIMAX) ---
-    function makeAIMove() {
-        const bestMove = findBestMove();
-        if (bestMove) {
-            movePiece(bestMove.start.row, bestMove.start.col, bestMove.end.row, bestMove.end.col);
-        }
-        switchTurns();
-    }
+    function makeAIMove() { const bestMove = findBestMove(); if (bestMove) { movePiece(bestMove.start.row, bestMove.start.col, bestMove.end.row, bestMove.end.col); } switchTurns(); }
+    function findBestMove() { let bestMove = null; let bestValue = -Infinity; const moves = getAllPossibleMoves('black', boardState); moves.sort(() => Math.random() - 0.5); for (const move of moves) { const newBoard = JSON.parse(JSON.stringify(boardState)); const piece = newBoard[move.start.row][move.start.col]; newBoard[move.end.row][move.end.col] = piece; newBoard[move.start.row][move.start.col] = null; let newBKingPos = (piece === 'k') ? move.end : blackKingPos; const boardValue = minimax(newBoard, difficultyLevels[difficulty] - 1, false, -Infinity, Infinity, whiteKingPos, newBKingPos); if (boardValue > bestValue) { bestValue = boardValue; bestMove = move; } } return bestMove; }
 
-    function findBestMove() {
-        let bestMove = null;
-        let bestValue = -Infinity;
-        const moves = getAllPossibleMoves('black', boardState);
-        moves.sort(() => Math.random() - 0.5);
-
-        for (const move of moves) {
-            const newBoard = JSON.parse(JSON.stringify(boardState));
-            const piece = newBoard[move.start.row][move.start.col];
-            newBoard[move.end.row][move.end.col] = piece;
-            newBoard[move.start.row][move.start.col] = null;
-            let newBKingPos = (piece === 'k') ? move.end : blackKingPos;
-            const boardValue = minimax(newBoard, difficultyLevels[difficulty] - 1, false, -Infinity, Infinity, whiteKingPos, newBKingPos);
-            if (boardValue > bestValue) {
-                bestValue = boardValue;
-                bestMove = move;
-            }
-        }
-        return bestMove;
-    }
-
-    // --- The rest of the logic functions (unchanged) ---
+    // --- Core Chess Logic ---
     function updateTurnDisplay() { turnDisplay.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`; }
-    function getPieceColor(pieceChar) { if (!pieceChar) return null; return (pieceChar === pieceChar.toLowerCase()) ? 'black' : 'white'; }
-    function highlightValidMoves(row, col) { const moves = getAllPossibleMoves(currentPlayer, boardState).filter(m => m.start.row === row && m.start.col === col); moves.forEach(move => { const targetSquare = document.querySelector(`.square[data-row="${move.end.row}"][data-col="${move.end.col}"]`); if (targetSquare) { targetSquare.classList.add('highlight-move'); } }); }
+    function getPieceColor(p) { if (!p) return null; return (p === p.toLowerCase()) ? 'black' : 'white'; }
+    function highlightValidMoves(r, c) { const moves = getAllPossibleMoves(currentPlayer, boardState).filter(m => m.start.row === r && m.start.col === c); moves.forEach(move => { const targetSquare = document.querySelector(`.square[data-row="${move.end.row}"][data-col="${move.end.col}"]`); if (targetSquare) targetSquare.classList.add('highlight-move'); }); }
     function clearHighlights() { document.querySelectorAll('.highlight-move').forEach(sq => sq.classList.remove('highlight-move')); }
-    function isLegalMove(startPos, endPos, currentBoard) { if (!isValidMove(startPos, endPos, currentBoard)) return false; const tempBoard = JSON.parse(JSON.stringify(currentBoard)); const piece = tempBoard[startPos.row][startPos.col]; tempBoard[endPos.row][endPos.col] = piece; tempBoard[startPos.row][startPos.col] = null; const kingColor = getPieceColor(piece); let tempWhiteKingPos = { ...whiteKingPos }; let tempBlackKingPos = { ...blackKingPos }; if (piece.toUpperCase() === 'K') { if (kingColor === 'white') tempWhiteKingPos = { row: endPos.row, col: endPos.col }; else tempBlackKingPos = { row: endPos.row, col: endPos.col }; } return !isKingInCheck(kingColor, tempBoard, tempWhiteKingPos, tempBlackKingPos); }
-    function isValidMove(startPos, endPos, currentBoard) { const piece = currentBoard[startPos.row][startPos.col]; if (!piece) return false; const targetPiece = currentBoard[endPos.row][endPos.col]; if (targetPiece && getPieceColor(piece) === getPieceColor(targetPiece)) return false; const pieceType = piece.toUpperCase(); switch (pieceType) { case 'P': return isValidPawnMove(startPos, endPos, currentBoard); case 'R': return isValidRookMove(startPos, endPos, currentBoard); case 'N': return isValidKnightMove(startPos, endPos); case 'B': return isValidBishopMove(startPos, endPos, currentBoard); case 'Q': return isValidQueenMove(startPos, endPos, currentBoard); case 'K': return isValidKingMove(startPos, endPos); default: return false; } }
-    function isPathClear(startPos, endPos, currentBoard) { const rowStep = Math.sign(endPos.row - startPos.row); const colStep = Math.sign(endPos.col - startPos.col); let r = startPos.row + rowStep; let c = startPos.col + colStep; while (r !== endPos.row || c !== endPos.col) { if (currentBoard[r][c] !== null) return false; r += rowStep; c += colStep; } return true; }
+    function isLegalMove(start, end, board) { if (!isValidMove(start, end, board)) return false; const tempBoard = JSON.parse(JSON.stringify(board)); const piece = tempBoard[start.row][start.col]; tempBoard[end.row][end.col] = piece; tempBoard[start.row][start.col] = null; const color = getPieceColor(piece); let tempWKingPos = { ...whiteKingPos }; let tempBKingPos = { ...blackKingPos }; if (piece.toUpperCase() === 'K') { if (color === 'white') tempWKingPos = { ...end }; else tempBKingPos = { ...end }; } return !isKingInCheck(color, tempBoard, tempWKingPos, tempBKingPos); }
+    function isValidMove(start, end, board) { const piece = board[start.row][start.col]; if (!piece) return false; const target = board[end.row][end.col]; if (target && getPieceColor(piece) === getPieceColor(target)) return false; switch (piece.toUpperCase()) { case 'P': return isValidPawnMove(start, end, board); case 'R': return isValidRookMove(start, end, board); case 'N': return isValidKnightMove(start, end); case 'B': return isValidBishopMove(start, end, board); case 'Q': return isValidQueenMove(start, end, board); case 'K': return isValidKingMove(start, end, board); default: return false; } }
+    function isPathClear(start, end, board) { const rStep = Math.sign(end.row - start.row), cStep = Math.sign(end.col - start.col); let r = start.row + rStep, c = start.col + cStep; while (r !== end.row || c !== end.col) { if (board[r][c] !== null) return false; r += rStep; c += cStep; } return true; }
     function isValidPawnMove(start, end, board) { const piece = board[start.row][start.col]; const color = getPieceColor(piece); const dir = color === 'white' ? -1 : 1; if (start.col === end.col && !board[end.row][end.col]) { if (end.row === start.row + dir) return true; if (end.row === start.row + 2 * dir && (color === 'white' ? start.row === 6 : start.row === 1) && !board[start.row + dir][start.col]) return true; } if (Math.abs(start.col - end.col) === 1 && end.row === start.row + dir && board[end.row][end.col]) return true; return false; }
     function isValidRookMove(start, end, board) { return (start.row === end.row || start.col === end.col) && isPathClear(start, end, board); }
-    function isValidKnightMove(start, end) { const rDiff = Math.abs(start.row - end.row); const cDiff = Math.abs(start.col - end.col); return (rDiff === 2 && cDiff === 1) || (rDiff === 1 && cDiff === 2); }
+    function isValidKnightMove(start, end) { const rDiff = Math.abs(start.row - end.row), cDiff = Math.abs(start.col - end.col); return (rDiff === 2 && cDiff === 1) || (rDiff === 1 && cDiff === 2); }
     function isValidBishopMove(start, end, board) { return Math.abs(start.row - end.row) === Math.abs(start.col - end.col) && isPathClear(start, end, board); }
     function isValidQueenMove(start, end, board) { return isValidRookMove(start, end, board) || isValidBishopMove(start, end, board); }
-    function isValidKingMove(start, end) { return Math.abs(start.row - end.row) <= 1 && Math.abs(start.col - end.col) <= 1; }
-    function isKingInCheck(kingColor, currentBoard, currentWhiteKingPos, currentBlackKingPos) { const kingPos = kingColor === 'white' ? currentWhiteKingPos : currentBlackKingPos; const opponentColor = kingColor === 'white' ? 'black' : 'white'; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = currentBoard[r][c]; if (piece && getPieceColor(piece) === opponentColor) { if (isValidMove({ row: r, col: c }, kingPos, currentBoard)) return true; } } } return false; }
-    function getAllPossibleMoves(color, currentBoard) { const moves = []; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = currentBoard[r][c]; if (piece && getPieceColor(piece) === color) { for (let tr = 0; tr < 8; tr++) { for (let tc = 0; tc < 8; tc++) { const startPos = { row: r, col: c }; const endPos = { row: tr, col: tc }; if (isLegalMove(startPos, endPos, currentBoard)) moves.push({ start: startPos, end: endPos }); } } } } } return moves; }
-    function evaluateBoard(board) { let total = 0; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = board[r][c]; if (piece) { total += (getPieceColor(piece) === 'black' ? pieceValues[piece.toUpperCase()] : -pieceValues[piece.toUpperCase()]); } } } return total; }
-    function minimax(board, depth, isMaximizingPlayer, alpha, beta, tempWKingPos, tempBKingPos) { if (depth === 0) return evaluateBoard(board); const color = isMaximizingPlayer ? 'black' : 'white'; const moves = getAllPossibleMoves(color, board); if (moves.length === 0) { if (isKingInCheck(color, board, tempWKingPos, tempBKingPos)) return isMaximizingPlayer ? -Infinity : Infinity; return 0; } if (isMaximizingPlayer) { let maxEval = -Infinity; for (const move of moves) { const newBoard = JSON.parse(JSON.stringify(board)); const piece = newBoard[move.start.row][move.start.col]; newBoard[move.end.row][move.end.col] = piece; newBoard[move.start.row][move.start.col] = null; let newBKingPos = (piece === 'k') ? move.end : tempBKingPos; const evaluation = minimax(newBoard, depth - 1, false, alpha, beta, tempWKingPos, newBKingPos); maxEval = Math.max(maxEval, evaluation); alpha = Math.max(alpha, evaluation); if (beta <= alpha) break; } return maxEval; } else { let minEval = Infinity; for (const move of moves) { const newBoard = JSON.parse(JSON.stringify(board)); const piece = newBoard[move.start.row][move.start.col]; newBoard[move.end.row][move.end.col] = piece; newBoard[move.start.row][move.start.col] = null; let newWKingPos = (piece === 'K') ? move.end : tempWKingPos; const evaluation = minimax(newBoard, depth - 1, true, alpha, beta, newWKingPos, tempBKingPos); minEval = Math.min(minEval, evaluation); beta = Math.min(beta, evaluation); if (beta <= alpha) break; } return minEval; } }
+    function isValidKingMove(start, end, board) { if (Math.abs(start.row - end.row) <= 1 && Math.abs(start.col - end.col) <= 1) return true; if (start.row === end.row && Math.abs(start.col - end.col) === 2) return canCastle(start, end, board); return false; }
+    function canCastle(start, end, board) { const color = getPieceColor(board[start.row][start.col]); const rights = color === 'white' ? castlingRights.w : castlingRights.b; const kingSide = end.col > start.col; if (isKingInCheck(color, board, whiteKingPos, blackKingPos)) return false; if (kingSide) { if (!rights.k || board[start.row][5] || board[start.row][6]) return false; if (isSquareAttacked({ row: start.row, col: 5 }, color === 'white' ? 'black' : 'white', board) || isSquareAttacked({ row: start.row, col: 6 }, color === 'white' ? 'black' : 'white', board)) return false; } else { if (!rights.q || board[start.row][1] || board[start.row][2] || board[start.row][3]) return false; if (isSquareAttacked({ row: start.row, col: 2 }, color === 'white' ? 'black' : 'white', board) || isSquareAttacked({ row: start.row, col: 3 }, color === 'white' ? 'black' : 'white', board)) return false; } return true; }
+    function isSquareAttacked(pos, attackerColor, board) { for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = board[r][c]; if (piece && getPieceColor(piece) === attackerColor && isValidMove({ row: r, col: c }, pos, board)) return true; } } return false; }
+    function isKingInCheck(kingColor, board, wKingPos, bKingPos) { const kingPos = kingColor === 'white' ? wKingPos : bKingPos; return isSquareAttacked(kingPos, kingColor === 'white' ? 'black' : 'white', board); }
+    function getAllPossibleMoves(color, board) { const moves = []; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { if (board[r][c] && getPieceColor(board[r][c]) === color) { for (let tr = 0; tr < 8; tr++) { for (let tc = 0; tc < 8; tc++) { if (isLegalMove({ row: r, col: c }, { row: tr, col: tc }, board)) moves.push({ start: { row: r, col: c }, end: { row: tr, col: tc } }); } } } } } return moves; }
+    function evaluateBoard(board) { let total = 0; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const p = board[r][c]; if (p) total += (getPieceColor(p) === 'black' ? pieceValues[p.toUpperCase()] : -pieceValues[p.toUpperCase()]); } } return total; }
+    function minimax(board, depth, isMax, a, b, wKPos, bKPos) { if (depth === 0) return evaluateBoard(board); const color = isMax ? 'black' : 'white'; const moves = getAllPossibleMoves(color, board); if (moves.length === 0) return isKingInCheck(color, board, wKPos, bKPos) ? (isMax ? -Infinity : Infinity) : 0; if (isMax) { let maxEval = -Infinity; for (const move of moves) { const newBoard = JSON.parse(JSON.stringify(board)); const p = newBoard[move.start.row][move.start.col]; newBoard[move.end.row][move.end.col] = p; newBoard[move.start.row][move.start.col] = null; const newBKingPos = p === 'k' ? move.end : bKPos; maxEval = Math.max(maxEval, minimax(newBoard, depth - 1, false, a, b, wKPos, newBKingPos)); a = Math.max(a, maxEval); if (b <= a) break; } return maxEval; } else { let minEval = Infinity; for (const move of moves) { const newBoard = JSON.parse(JSON.stringify(board)); const p = newBoard[move.start.row][move.start.col]; newBoard[move.end.row][move.end.col] = p; newBoard[move.start.row][move.start.col] = null; const newWKingPos = p === 'K' ? move.end : wKPos; minEval = Math.min(minEval, minimax(newBoard, depth - 1, true, a, b, newWKingPos, bKPos)); b = Math.min(b, minEval); if (b <= a) break; } return minEval; } }
 
+    // --- Opening & Notation Logic ---
+    function updateHistoryAndOpening() { if (!lastMove) return; const san = moveToSAN(lastMove); sanHistory.push(san); let tempPgn = ''; let finalOpening = ''; for (let i = 0; i < sanHistory.length; i++) { if (i % 2 === 0) tempPgn += (i > 0 ? ' ' : '') + `${Math.floor(i / 2) + 1}. ${sanHistory[i]}`; else tempPgn += ` ${sanHistory[i]}`; if (openingsDB[tempPgn]) finalOpening = openingsDB[tempPgn]; } currentOpeningName = finalOpening; document.getElementById('opening-name-display').textContent = currentOpeningName || '-'; }
+    function toAlgebraic(pos) { const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']; const ranks = ['8', '7', '6', '5', '4', '3', '2', '1']; return files[pos.col] + ranks[pos.row]; }
+    function moveToSAN(move) { const pieceType = move.piece.toUpperCase(); if (pieceType === 'K' && Math.abs(move.start.col - move.end.col) === 2) return move.end.col > move.start.col ? 'O-O' : 'O-O-O'; let san = pieceType === 'P' ? '' : pieceType; if (move.captured) { if (pieceType === 'P') san += toAlgebraic(move.start)[0]; san += 'x'; } san += toAlgebraic(move.end); if (pieceType === 'P' && (move.end.row === 0 || move.end.row === 7)) san += '=Q'; const opponentColor = currentPlayer; if (isKingInCheck(opponentColor, boardState, whiteKingPos, blackKingPos)) { const opponentHasMoves = getAllPossibleMoves(opponentColor, boardState).length > 0; san += opponentHasMoves ? '+' : '#'; } return san; }
 </script>
 
 </html>
