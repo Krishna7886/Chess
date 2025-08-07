@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .body{
+            text-align: center;
+            margin-top: 10%;
+        }
+        .in,.submit{
+            height: 60px;
+            border: 0px solid;
+        }
+        .inV{
+            height: 30px;
+            width:400px;
+            border-radius: 20px;
+            border: 0px;
+            background-color: rgb(183, 179, 179);
+        }
+        .subButton{
+            height: 30px;
+            width:200px;
+            border-radius: 20px;
+            background-color: rgb(144, 144, 222);
+            border: 0px solid;
+        }
+    </style>
+</head>
+<body>
+    <form class="body">
+        <div class="in"><input type="text" class="inV"/></div>
+        <div class="submit"><input type="submit" class="subButton"/></div>
+        
+    </form>
+    
+    <div class="chessBoard" style="align-items:center;height:640px;width:640px;border:1px solid"></div>
+    <div class="result"></div>
+    <script>
+        let board = document.querySelector(".chessBoard");
+        for(let i=0;i<8;i++){
+            let row = document.createElement("div");
+            
+            row.style.height = "80px"
+            row.classList.add('r' + i);
+            row.style.display = "flex"
+            //row.style.border = "1px solid"
+            board.appendChild(row)
+            for (let j = 0; j < 8; j++) {
+                let box = document.createElement("div");
+                box.style.height = "80px"
+                box.style.width = "80px"
+                box.classList.add('b'+i+""+j,"box");
+                box.style.display = "flex"
+                box.style.fontSize = "7.5px"
+                box.style.alignItems = "center";
+                box.style.justifyContent = "center"
+                if (i%2 == 0 && j % 2 == 0) {
+                    box.style.backgroundColor = "red"
+                } if (i % 2 != 0 && j%2 != 0) {
+                    box.style.backgroundColor = "red"
+                }
+                row.appendChild(box)
+            }
+        }
+        
+    </script>
+    <script>
+        var input = document.querySelector(".inV");
+        var box = document.querySelectorAll(".box")
+        var btn = document.querySelector(".subButton");
+        var result = document.querySelector(".result")
+        btn.addEventListener("click",(e)=>{
+            e.preventDefault();
+            let arr = []
+            var num = +(input.value)
+            for(let n=0;n<num;n++){
+                
+                let res = 0
+                let val = 1
+                for (let i = 1; i <= n; i++) {
+                    //res = val
+                    val = 2 * res + 1;
+                    res = val
+                }
+                arr[n] = res+1
+                //let newRes = document.createElement("p");
+                //newRes.textContent = `${n+1} = ${arr[n]}`;
+                //result.appendChild(newRes)
+            }
+            
+            console.log(arr)
+                for (let i = 0; i < 64; i++) {
+                    box[i].innerHTML = arr[i]
+                }
+            if(arr.length>64) {
+                for (let n = 64; n < num; n++) {
+
+                    let res = 0
+                    let val = 1
+                    for (let i = 1; i <= n; i++) {
+                        //res = val
+                        val = 2 * res + 1;
+                        res = val
+                    }
+                    arr[n] = res + 1
+                    let newRes = document.createElement("p");
+                    newRes.innerHTML = `${n + 1}<sup>th</sup> box : ${arr[n]}`;
+                    result.appendChild(newRes)
+                }
+            }
+            
+        })
+        
+    </script>
+</body>
+</html>
