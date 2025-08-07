@@ -93,7 +93,7 @@
             
             console.log(arr)
                 for (let i = 0; i < 64; i++) {
-                    box[i].innerHTML = arr[i]
+                    box[i].innerHTML = arr[i].toLocaleString('en-IN')
                 }
             if(arr.length>64) {
                 for (let n = 64; n < num; n++) {
@@ -107,7 +107,7 @@
                     }
                     arr[n] = res + 1
                     let newRes = document.createElement("p");
-                    newRes.innerHTML = `${n + 1}<sup>th</sup> box : ${arr[n]}`;
+                    newRes.innerHTML = `${n + 1}<sup>th</sup> box : ${arr[n].toLocaleString('en-IN')}`;
                     result.appendChild(newRes)
                 }
             }
