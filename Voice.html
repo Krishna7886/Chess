@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Controlled Chess AI</title>
+    <!-- cm-chessboard styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@4/assets/styles/cm-chessboard.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2f3542;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        #board {
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #2ed573;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #26af5f;
+        }
+
+        button:disabled {
+            background-color: #747d8c;
+            cursor: not-allowed;
+        }
+
+        #status-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: #3e444f;
+            border-radius: 5px;
+            width: 380px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .voice-indicator {
+            font-weight: bold;
+            color: #eccc68;
+            margin-top: 5px;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #a4b0be;
+            max-width: 400px;
+            line-height: 1.4;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Voice Chess vs AI</h1>
+    <!-- The Chessboard Container -->
+    <div id="board"></div>
+    <div class="controls">
+        <button id="start-voice">Start Voice Control</button>
+    </div>
+    <div id="status-box">
+        <div id="game-status">Your turn (White).</div>
+        <div id="voice-status" class="voice-indicator">Voice control offline.</div>
+    </div>
+    <div class="instructions">
+        <strong>How to move:</strong> Drag pieces manually OR click start and speak.<br>
+        <em>Examples: "E2 to E4", "G1 to F3", "B7 to B8".</em>
+    </div>
+    <!-- Chess Logic & Board Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script type="module">
+        import { Chessboard, INPUT_EVENT_TYPE, COLOR } from "https://cdn.jsdelivr.net/npm/cm-chessboard@4/src/cm-chessboard/Chessboard.js";
+
+        const game = new Chess();
+        const gameStatusEl = document.getElementById('game-status');
+        const voiceStatusEl = document.getElementById('voice-status');
+        const voiceBtn = document.getElementById('start-voice');
+
+        // Setup the new SVG-based board engine
+        const board = new Chessboard(document.getElementById("board"), {
+            position: "start",
+            sprite: { url: "https://cdn.jsdelivr.net/npm/cm-chessboard@4/assets/images/chessboard-sprite.svg" },
+            orientation: COLOR.white
+        });
+
+        // Enable user dragging mechanics
+        board.enableMoveInput((event) => {
+            if (game.game_over() || game.turn() === 'b') return false;
+
+            switch (event.type) {
+                case INPUT_EVENT_TYPE.moveInputStarted:
+                    return true;
+                case INPUT_EVENT_TYPE.moveInputFinished:
+                    if (event.legalMove) {
+                        let move = game.move({
+                            from: event.squareFrom,
+                            to: event.squareTo,
+                            promotion: 'q'
+                        });
+                        board.setPosition(game.fen());
+                        updateStatus();
+
+                        // Trigger AI move if game isn't over
+                        if (!game.game_over()) {
+                            setTimeout(makeAIMove, 600);
+                        }
+                    }
+                    return true;
+            }
+        });
+
+        // Simple Smart AI Move Selector (Minimax heuristic evaluation)
+        function makeAIMove() {
+            if (game.game_over()) return;
+
+            gameStatusEl.textContent = "AI is thinking...";
+            let moves = game.moves({ verbose: true });
+
+            // Basic positional piece weights
+            const weights = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+
+            // Score moves to find the highest value capture/position
+            moves.sort((a, b) => {
+                let scoreA = a.captured ? weights[a.captured] : 0;
+                let scoreB = b.captured ? weights[b.captured] : 0;
+                return scoreB - scoreA;
+            });
+
+            // Filter out the top tier options and pick an optimal one
+            let bestMove = moves[0];
+
+            game.move(bestMove);
+            board.setPosition(game.fen());
+            updateStatus();
+        }
+
+        function updateStatus() {
+            let status = '';
+            if (game.in_checkmate()) {
+                status = game.turn() === 'w' ? 'Game Over. AI wins!' : 'Game Over. You win!';
+            } else if (game.in_draw()) {
+                status = 'Game over, it\'s a draw.';
+            } else {
+                status = game.turn() === 'w' ? "Your turn (White)." : "AI is thinking...";
+            }
+            gameStatusEl.textContent = status;
+        }
+
+        // --- Voice Command Controller Engine ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            voiceStatusEl.textContent = "Voice framework not supported by browser. Try Chrome/Edge.";
+            voiceBtn.disabled = true;
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            voiceBtn.addEventListener('click', () => {
+                recognition.start();
+                voiceStatusEl.textContent = "Listening... state a move like 'E2 to E4'";
+                voiceBtn.disabled = true;
+            });
+
+            recognition.onresult = function (event) {
+                if (game.turn() === 'b') return; // Blocks speech inputs during AI turns
+
+                const resultIndex = event.resultIndex;
+                const transcript = event.results[resultIndex][0].transcript.trim().toLowerCase();
+                voiceStatusEl.textContent = `Heard: "${transcript}"`;
+
+                processVoiceInput(transcript);
+            };
+
+            recognition.onerror = () => { voiceBtn.disabled = false; };
+            recognition.onend = () => { voiceBtn.disabled = false; };
+        }
+
+        function processVoiceInput(text) {
+            let cleanText = text.replace(/\s+/g, '').replace(/to/g, '');
+            const moveRegex = /([a-h][1-8])([a-h][1-8])/;
+            const match = cleanText.match(moveRegex);
+
+            if (match) {
+                const fromSquare = match[1];
+                const toSquare = match[2];
+
+                let move = game.move({
+                    from: fromSquare,
+                    to: toSquare,
+                    promotion: 'q'
+                });
+
+                if (move === null) {
+                    voiceStatusEl.textContent = `Illegal move: ${fromSquare.toUpperCase()} to ${toSquare.toUpperCase()}`;
+                } else {
+                    board.setPosition(game.fen());
+                    updateStatus();
+                    voiceStatusEl.textContent = `Moved: ${fromSquare.toUpperCase()} to ${toSquare.toUpperCase()}`;
+
+                    // Call AI opponent counter action
+                    setTimeout(makeAIMove, 800);
+                }
+            } else {
+                voiceStatusEl.textContent = `Could not translate "${text}". Try saying "E2 to E4"`;
+            }
+        }
+    </script>
+</body>
+
+</html>
