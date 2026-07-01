@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Chess Studio AI Pro</title>
+    
+    <!-- Chessboard.js CSS Framework -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #1e222b;
+            --panel-color: #282c34;
+            --accent-color: #00bcd4;
+            --success-color: #2ed573;
+            --danger-color: #ff4757;
+            --text-color: #ffffff;
+            --text-muted: #abb2bf;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--accent-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard {
+                grid-template-columns: 430px 1fr;
+            }
+        }
+
+        /* Chessboard Container */
+        .board-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--panel-color);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        #board {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        /* Control Panel Sidebar */
+        .panel {
+            background: var(--panel-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        /* Chess Clock CSS */
+        .clocks-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .clock-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .clock-box.active {
+            border-color: var(--accent-color);
+            background: rgba(0, 188, 212, 0.12);
+        }
+
+        .clock-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .clock-time {
+            font-size: 22px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--text-color);
+        }
+
+        .status-widget {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .status-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .status-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .voice-active {
+            border-left-color: var(--success-color);
+            background: rgba(46, 213, 115, 0.05);
+        }
+
+        /* Action Buttons */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button, select {
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #3a3f4b;
+            color: var(--text-color);
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #1e222b;
+            grid-column: span 2;
+        }
+
+        .btn-active-mic {
+            background: var(--danger-color) !important;
+            color: white !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .btn-danger { background: #4b3238; color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.2); }
+        .btn-danger:hover { background: var(--danger-color); color: white; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        /* Move History Box */
+        .history-container {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            max-height: 120px;
+        }
+
+        .history-log {
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            flex-grow: 1;
+        }
+
+        .history-row {
+            display: grid;
+            grid-template-columns: 35px 1fr 1fr;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .instructions {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            background: rgba(255,255,255,0.02);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Highlighted Big Red Voice Style */
+        .voice-heard-highlight {
+            color: var(--danger-color) !important;
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase;
+            display: block;
+            margin-top: 5px;
+            text-shadow: 0 0 5px rgba(255, 71, 87, 0.3);
+            animation: pulse-red 1s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Voice Chess Studio</h1>
+
+    <div class="dashboard">
+        <div class="board-container">
+            <div id="board"></div>
+        </div>
+
+        <div class="panel">
+            <!-- Game Clocks Widget -->
+            <div class="clocks-container">
+                <div class="clock-box" id="white-clock-box">
+                    <span class="clock-label">White Timer</span>
+                    <span class="clock-time" id="white-time">05:00</span>
+                </div>
+                <div class="clock-box" id="black-clock-box">
+                    <span class="clock-label">Black Timer</span>
+                    <span class="clock-time" id="black-time">05:00</span>
+                </div>
+            </div>
+
+            <div class="status-widget" id="game-status-widget">
+                <div class="status-title">Match State</div>
+                <div id="game-status" class="status-value">White to move.</div>
+            </div>
+
+            <div class="status-widget" id="voice-status-widget">
+                <div class="status-title">Voice System (Mobile Restarter Active)</div>
+                <div id="voice-status" class="status-value" style="color: var(--text-muted);">Voice engine offline.</div>
+            </div>
+
+            <!-- Online Invite Widget -->
+            <div class="status-widget" id="online-widget" style="display: none; border-left-color: #e28743; background: rgba(226, 135, 67, 0.05);">
+                <div class="status-title">Invite Link</div>
+                <input type="text" id="invite-link-input" readonly style="width: calc(100% - 14px); background: #1a1d24; color: white; border: 1px solid #3a3f4b; border-radius: 4px; padding: 6px; font-size: 11px; margin-top: 4px;" onclick="this.select()">
+                <button id="copy-invite-btn" style="margin-top: 6px; width: 100%; font-size: 11px; padding: 6px;">Copy Invite Link</button>
+            </div>
+
+            <!-- Game Settings Setup -->
+            <div class="form-group">
+                <label for="game-mode">Game Play Mode</label>
+                <select id="game-mode">
+                    <option value="pve" selected>Player vs Computer AI</option>
+                    <option value="pvp">Two Players (Local Match)</option>
+                    <option value="online">Online Multiplayer (Share Link)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="ai-difficulty-group">
+                <label for="ai-difficulty">Opponent AI Intellect</label>
+                <select id="ai-difficulty">
+                    <option value="easy">Easy (Randomizer)</option>
+                    <option value="medium" selected>Medium (Tactical Attacker)</option>
+                    <option value="hard">Hard (2-Ply Minimax Core)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="time-control">Time Limit</label>
+                <select id="time-control">
+                    <option value="60">1 Minute (Bullet)</option>
+                    <option value="180">3 Minutes (Blitz)</option>
+                    <option value="300" selected>5 Minutes (Blitz)</option>
+                    <option value="600">10 Minutes (Rapid)</option>
+                    <option value="1800">30 Minutes (Classical)</option>
+                </select>
+            </div>
+
+            <div class="btn-grid">
+                <button id="start-voice" class="btn-primary">Turn Voice Control ON</button>
+                <button id="undo-move">Undo Move</button>
+                <button id="flip-board">Flip Board</button>
+                <button id="resign-btn" class="btn-danger">Resign Match</button>
+                <button id="reset-game" class="btn-danger">Restart Match</button>
+            </div>
+
+            <div class="history-container">
+                <div class="status-title" style="margin-bottom: 3px;">Move Log</div>
+                <div class="history-log" id="history-log"></div>
+            </div>
+
+            <div class="instructions">
+                <strong>Voice Wake Word Instructions:</strong><br>
+                • Turn on Voice Control, then say <b>"Turn on voice"</b> to allow chess moves.<br>
+                • Say <b>"Turn off voice"</b> to lock or pause chess moves.<br>
+                • Say <b>"Resign"</b> or <b>"I resign"</b> to forfeit and end the match.<br>
+                • Say piece name + destination: <b>"Rook C2"</b>, <b>"Knight F3"</b>, <b>"E4"</b>.<br>
+                <span style="color: #ffd32a; font-size: 11px; display: block; margin-top: 5px;">
+                    ⚠️ <b>Browser Permission Security:</b> You must host this page on an <b>HTTPS</b> server (e.g., free GitHub Pages) so your browser remembers your microphone permissions persistently and enables PeerJS connection between different devices.
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <!-- PeerJS WebRTC Online Engine -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+    <script>
+        let game = new Chess();
+        let board = null;
+        let speechEngine = null;
+        let isVoiceActive = false; // State manager for mic loop persistence
+        let voiceCommandsListening = false; // Checks if the "Turn on voice" command has been run
+        let isSpeakingTTS = false; // Flag to prevent recognition loops while computer is speaking
+        let activeVoice = null; // High quality native voice reference
+
+        // Online Multi-Player Peer Setup
+        let peer = null;
+        let conn = null;
+        let myRole = 'local'; // 'local', 'host' (White), or 'guest' (Black)
+        let isOnlineConnected = false;
+
+        // Clock State Management
+        let clockInterval = null;
+        let whiteTime = 300;
+        let blackTime = 300;
+        let isGameActive = false;
+        let isGameOverAnnounced = false;
+
+        const gameStatusEl = document.getElementById('game-status');
+        const voiceStatusEl = document.getElementById('voice-status');
+        const voiceWidget = document.getElementById('voice-status-widget');
+        const historyLogEl = document.getElementById('history-log');
+        const aiDifficultySel = document.getElementById('ai-difficulty');
+        const voiceBtn = document.getElementById('start-voice');
+
+        const boardConfig = {
+            draggable: true,
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            onDragStart: handleDragStart,
+            onDrop: handlePieceDrop,
+            onSnapEnd: handleAnimationSync
+        };
+        
+        board = Chessboard('board', boardConfig);
+
+        function handleDragStart(source, piece, position, orientation) {
+            if (game.game_over() || isGameOverAnnounced) return false;
+            
+            const gameMode = document.getElementById('game-mode').value;
+            
+            // In PvE mode, human cannot move black pieces
+            if (gameMode === 'pve' && piece.search(/^b/) !== -1) return false;
+
+            // In Online mode, lock the board turns to correct color assignments
+            if (gameMode === 'online') {
+                if (!isOnlineConnected) return false; // Block inputs until connection active
+                if (myRole === 'host' && piece.search(/^b/) !== -1) return false; // Host is White
+                if (myRole === 'guest' && piece.search(/^w/) !== -1) return false; // Guest is Black
+            }
+
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        function handlePieceDrop(source, target) {
+            let moveExecution = game.move({ from: source, to: target, promotion: 'q' });
+            if (moveExecution === null) return 'snapback';
+            
+            // Replicate move across the PeerJS WebRTC data channel
+            if (isOnlineConnected) {
+                const movesHistory = game.history();
+                const lastMoveSan = movesHistory[movesHistory.length - 1];
+                conn.send({ type: 'move', san: lastMoveSan });
+            }
+            
+            commitTurnUpdates();
+        }
+
+        function handleAnimationSync() {
+            board.position(game.fen());
+        }
+
+        function commitTurnUpdates() {
+            renderMoveHistory();
+            
+            // Start clock if it is the first move of the game
+            if (!isGameActive && !isGameOverAnnounced) {
+                startClock();
+            }
+            updateClockUI();
+            refreshStateIndicators();
+            announceLastMove(); // Voice out turn completion & check checkmate
+
+            const gameMode = document.getElementById('game-mode').value;
+            if (gameMode === 'pve' && !game.game_over() && game.turn() === 'b') {
+                // Delay AI calculation to give time for human voice announcement to end
+                setTimeout(computeAIEngineMove, 1600);
+            }
+        }
+
+        function renderMoveHistory() {
+            historyLogEl.innerHTML = '';
+            const historyData = game.history({ verbose: true });
+            let htmlPayload = '';
+            for (let i = 0; i < historyData.length; i += 2) {
+                htmlPayload += `
+                    <div class="history-row">
+                        <div>${Math.floor(i / 2) + 1}.</div>
+                        <div>${historyData[i] ? historyData[i].san : ''}</div>
+                        <div>${historyData[i+1] ? historyData[i+1].san : ''}</div>
+                    </div>`;
+            }
+            historyLogEl.innerHTML = htmlPayload;
+            historyLogEl.scrollTop = historyLogEl.scrollHeight;
+        }
+
+        function computeAIEngineMove() {
+            if (game.game_over() || isGameOverAnnounced) return;
+            const strategy = aiDifficultySel.value;
+            const validMoves = game.moves({ verbose: true });
+            let chosenMove = null;
+
+            if (strategy === 'easy' || validMoves.length === 0) {
+                chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+            } else if (strategy === 'medium') {
+                const valueMatrix = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+                validMoves.sort((alpha, beta) => (beta.captured ? valueMatrix[beta.captured] : 0) - (alpha.captured ? valueMatrix[alpha.captured] : 0));
+                chosenMove = validMoves[0];
+            } else if (strategy === 'hard') {
+                let topScore = -Infinity; let candidateMoves = [];
+                const weights = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+                function evalBoard() {
+                    let total = 0;
+                    game.board().forEach(r => r.forEach(s => { if (s) total += (s.color === 'b' ? weights[s.type] : -weights[s.type]); }));
+                    return total;
+                }
+                validMoves.forEach(m => {
+                    game.move(m);
+                    let worstCase = Infinity;
+                    game.moves().forEach(cm => { game.move(cm); let score = evalBoard(); if (score < worstCase) worstCase = score; game.undo(); });
+                    game.undo();
+                    if (worstCase > topScore) { topScore = worstCase; candidateMoves = [m]; }
+                    else if (worstCase === topScore) candidateMoves.push(m);
+                });
+                chosenMove = candidateMoves[Math.floor(Math.random() * candidateMoves.length)] || validMoves[0];
+            }
+            game.move(chosenMove);
+            board.position(game.fen());
+            renderMoveHistory();
+            updateClockUI();
+            refreshStateIndicators();
+            announceLastMove(); // Voice out AI turn completion & check checkmate
+        }
+
+        function refreshStateIndicators() {
+            let infoText = ''; 
+            let colorAccent = (game.turn() === 'w' ? 'White' : 'Black');
+            const gameMode = document.getElementById('game-mode').value;
+
+            if (game.in_checkmate()) {
+                const winner = game.turn() === 'w' ? 'Black' : 'White';
+                infoText = `Checkmate! ${winner} wins. Game Completed!`;
+                stopClock();
+            } else if (game.in_draw()) {
+                infoText = 'Match ended in a Draw. Game Completed!';
+                stopClock();
+            } else { 
+                if (gameMode === 'pvp') {
+                    infoText = `${colorAccent}'s turn. Please speak your move.`;
+                } else if (gameMode === 'online') {
+                    if (!isOnlineConnected) {
+                        infoText = "Waiting for online opponent to join...";
+                    } else if (myRole === 'host') {
+                        infoText = (game.turn() === 'w') ? "Your turn (White). Speak move." : "Friend's turn (Black).";
+                    } else if (myRole === 'guest') {
+                        infoText = (game.turn() === 'b') ? "Your turn (Black). Speak move." : "Friend's turn (White).";
+                    }
+                } else {
+                    infoText = (game.turn() === 'w') ? "Your turn (White). Speak your move." : "AI is calculating...";
+                }
+                if (game.in_check()) infoText += " [CHECK]"; 
+            }
+            gameStatusEl.textContent = infoText;
+        }
+
+        // --- Chess Clock Management ---
+        function startClock() {
+            if (clockInterval) clearInterval(clockInterval);
+            isGameActive = true;
+            clockInterval = setInterval(tickClock, 1000);
+        }
+
+        function stopClock() {
+            isGameActive = false;
+            if (clockInterval) {
+                clearInterval(clockInterval);
+                clockInterval = null;
+            }
+        }
+
+        function tickClock() {
+            if (game.game_over() || isGameOverAnnounced) {
+                stopClock();
+                return;
+            }
+
+            if (game.turn() === 'w') {
+                if (whiteTime > 0) {
+                    whiteTime--;
+                    updateClockUI();
+                    if (whiteTime === 0) triggerTimeOut('white');
+                }
+            } else {
+                if (blackTime > 0) {
+                    blackTime--;
+                    updateClockUI();
+                    if (blackTime === 0) triggerTimeOut('black');
+                }
+            }
+        }
+
+        function updateClockUI() {
+            document.getElementById('white-time').textContent = formatSeconds(whiteTime);
+            document.getElementById('black-time').textContent = formatSeconds(blackTime);
+
+            // Toggle active styling highlights
+            document.getElementById('white-clock-box').classList.remove('active');
+            document.getElementById('black-clock-box').classList.remove('active');
+            
+            if (isGameActive && !isGameOverAnnounced) {
+                if (game.turn() === 'w') {
+                    document.getElementById('white-clock-box').classList.add('active');
+                } else {
+                    document.getElementById('black-clock-box').classList.add('active');
+                }
+            }
+        }
+
+        function formatSeconds(s) {
+            const mins = Math.floor(s / 60);
+            const secs = s % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function triggerTimeOut(loserColor) {
+            const winner = loserColor === 'white' ? 'Black' : 'White';
+            gameStatusEl.textContent = `Time out! ${winner} wins on time. Game Completed!`;
+            speakText(`Time out. ${winner} wins the game on time. Game completed!`);
+            isGameOverAnnounced = true;
+            stopClock();
+        }
+
+        function triggerResign(color) {
+            if (isGameOverAnnounced) return;
+            const winner = color === 'white' ? 'Black' : 'White';
+            gameStatusEl.textContent = `${color.charAt(0).toUpperCase() + color.slice(1)} Resigned. ${winner} wins. Game Completed!`;
+            speakText(`Game over. ${color} resigns. ${winner} wins. Game completed!`);
+            isGameOverAnnounced = true;
+            stopClock();
+            
+            if (isOnlineConnected) {
+                conn.send({ type: 'resign' });
+            }
+        }
+
+        function resetGameWithClocks() {
+            resetGameWithClocksLocally();
+            
+            // Send match reset payload to synchronize remote board state
+            if (isOnlineConnected) {
+                conn.send({ type: 'restart' });
+            }
+        }
+
+        function resetGameWithClocksLocally() {
+            game.reset();
+            board.start();
+            stopClock();
+            isGameOverAnnounced = false;
+            
+            const limit = parseInt(document.getElementById('time-control').value);
+            whiteTime = limit;
+            blackTime = limit;
+            
+            updateClockUI();
+            renderMoveHistory();
+            refreshStateIndicators();
+            
+            // Recenter orientation view depending on role
+            if (myRole === 'guest') {
+                board.orientation('black');
+            } else {
+                board.orientation('white');
+            }
+        }
+
+        // Bind Setup Events
+        document.getElementById('reset-game').addEventListener('click', resetGameWithClocks);
+        
+        document.getElementById('undo-move').addEventListener('click', () => {
+            const gameMode = document.getElementById('game-mode').value;
+            if (gameMode === 'pve') {
+                game.undo(); game.undo(); // Undo AI move + User move
+            } else if (gameMode === 'online') {
+                return; // Block undoing in online matches
+            } else {
+                game.undo(); // Just undo 1 turn in local mode
+            }
+            board.position(game.fen());
+            renderMoveHistory();
+            updateClockUI();
+            refreshStateIndicators();
+        });
+
+        document.getElementById('flip-board').addEventListener('click', () => board.flip());
+        document.getElementById('time-control').addEventListener('change', resetGameWithClocks);
+        
+        document.getElementById('resign-btn').addEventListener('click', () => {
+            const resigningColor = (myRole === 'guest') ? 'black' : 'white';
+            triggerResign(resigningColor);
+        });
+
+        // Toggle dropdown panels dynamically
+        document.getElementById('game-mode').addEventListener('change', function() {
+            const aiDifficultyGroup = document.getElementById('ai-difficulty-group');
+            const onlineWidget = document.getElementById('online-widget');
+            
+            if (this.value === 'online') {
+                aiDifficultyGroup.style.display = 'none';
+                onlineWidget.style.display = 'block';
+                startHostingLobby();
+            } else {
+                if (this.value === 'pvp') {
+                    aiDifficultyGroup.style.display = 'none';
+                } else {
+                    aiDifficultyGroup.style.display = 'flex';
+                }
+                onlineWidget.style.display = 'none';
+                resetGameWithClocks();
+            }
+        });
+
+        // --- WebRTC Multiplayer Lobby Management ---
+        function startHostingLobby() {
+            if (peer) return; // Prevent double host instantiation
+            
+            voiceStatusEl.textContent = "Creating host room...";
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                const inviteLink = window.location.origin + window.location.pathname + '?join=' + id;
+                document.getElementById('invite-link-input').value = inviteLink;
+                voiceStatusEl.textContent = "Waiting for guest connection...";
+                speakText("Online lobby created. Please share the invite link with a friend.");
+            });
+
+            peer.on('connection', (connection) => {
+                setupConnection(connection);
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                voiceStatusEl.textContent = "Network initialization error.";
+            });
+        }
+
+        function setupConnection(connection) {
+            conn = connection;
+            conn.on('open', () => {
+                isOnlineConnected = true;
+                myRole = (myRole === 'guest') ? 'guest' : 'host';
+                
+                if (myRole === 'host') {
+                    const timeLimitSetting = document.getElementById('time-control').value;
+                    conn.send({ type: 'sync-settings', timeLimit: timeLimitSetting });
+                    speakText("Opponent connected! You are playing White. White moves first.");
+                } else {
+                    speakText("Successfully connected to host. You are playing Black. White moves first.");
+                    board.orientation('black');
+                }
+                resetGameWithClocksLocally();
+                refreshStateIndicators();
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'sync-settings') {
+                    document.getElementById('time-control').value = data.timeLimit;
+                    resetGameWithClocksLocally();
+                } else if (data.type === 'move') {
+                    game.move(data.san);
+                    board.position(game.fen());
+                    
+                    if (!isGameActive && !isGameOverAnnounced) {
+                        startClock();
+                    }
+                    updateClockUI();
+                    refreshStateIndicators();
+                    announceLastMove();
+                } else if (data.type === 'resign') {
+                    const resigningColor = (myRole === 'host') ? 'black' : 'white';
+                    triggerResign(resigningColor);
+                } else if (data.type === 'restart') {
+                    resetGameWithClocksLocally();
+                    speakText("Opponent restarted the match.");
+                }
+            });
+
+            conn.on('close', () => {
+                isOnlineConnected = false;
+                voiceStatusEl.textContent = "Friend disconnected.";
+                speakText("Your opponent has disconnected.");
+            });
+        }
+
+        // Copy button function
+        document.getElementById('copy-invite-btn').addEventListener('click', () => {
+            const copyText = document.getElementById('invite-link-input');
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            
+            const btn = document.getElementById('copy-invite-btn');
+            btn.textContent = "Copied!";
+            btn.style.background = "var(--success-color)";
+            btn.style.color = "#1e222b";
+            setTimeout(() => {
+                btn.textContent = "Copy Invite Link";
+                btn.style.background = "#3a3f4b";
+                btn.style.color = "var(--text-color)";
+            }, 2000);
+        });
+
+        // --- Text-to-Speech (TTS) Announcement Engine ---
+        function selectClearVoice() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Prefer native high-quality, clear English narrators
+            const preferences = [
+                'google us english',
+                'microsoft zira',
+                'microsoft david',
+                'samantha',
+                'en-us',
+                'en-gb'
+            ];
+            
+            for (let pref of preferences) {
+                let match = voices.find(v => v.name.toLowerCase().includes(pref) || v.lang.toLowerCase() === pref);
+                if (match) {
+                    activeVoice = match;
+                    break;
+                }
+            }
+            if (!activeVoice && voices.length > 0) {
+                activeVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = selectClearVoice;
+            selectClearVoice();
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech to stay real-time
+                isSpeakingTTS = true;
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                if (activeVoice) {
+                    utterance.voice = activeVoice;
+                }
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // Slightly slower speed for extreme verbal clarity
+                utterance.pitch = 1.0;
+
+                utterance.onend = function() {
+                    setTimeout(() => { isSpeakingTTS = false; }, 350);
+                };
+                utterance.onerror = function() {
+                    isSpeakingTTS = false;
+                };
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Single Entry point for checking checkmate to avoid browser audio cutoffs
+        function announceLastMove() {
+            const history = game.history({ verbose: true });
+            if (history.length > 0) {
+                const lastMove = history[history.length - 1];
+                const pieceNames = { p: 'Pawn', r: 'Rook', n: 'Knight', b: 'Bishop', q: 'Queen', k: 'King' };
+                const color = lastMove.color === 'w' ? 'White' : 'Black';
+                let speechString = '';
+
+                if (lastMove.san === 'O-O') {
+                    speechString = `${color} castles king side`;
+                } else if (lastMove.san === 'O-O-O') {
+                    speechString = `${color} castles queen side`;
+                } else {
+                    const piece = pieceNames[lastMove.piece];
+                    const target = lastMove.to.split('').join(' '); // Pronounce individually (e.g., "e 4")
+                    if (lastMove.captured) {
+                        speechString = `${color} ${piece} takes ${target}`;
+                    } else {
+                        speechString = `${color} ${piece} to ${target}`;
+                    }
+                }
+
+                // Check and bundle Game Over details to read out fully
+                if (game.in_checkmate()) {
+                    const winner = game.turn() === 'w' ? 'Black' : 'White';
+                    speechString += `. Checkmate. Game completed! ${winner} wins.`;
+                    isGameOverAnnounced = true;
+                    stopClock();
+                } else if (game.in_draw()) {
+                    speechString += `. Match ended in a draw. Game completed!`;
+                    isGameOverAnnounced = true;
+                    stopClock();
+                } else if (game.in_check()) {
+                    speechString += `. Check!`;
+                }
+
+                speakText(speechString);
+            }
+        }
+
+        // --- Advanced Voice Engine & Mobile Persistence Wrapper ---
+        const SpeechRecognitionNative = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognitionNative) {
+            voiceStatusEl.textContent = "Voice profiles unsupported on this device hardware.";
+            voiceBtn.disabled = true;
+        } else {
+            speechEngine = new SpeechRecognitionNative();
+            speechEngine.continuous = true;
+            speechEngine.interimResults = false;
+            speechEngine.lang = 'en-US';
+
+            // Cleaned to natively rely on speechEngine.start() to prevent media-device locks
+            voiceBtn.addEventListener('click', function() {
+                if (!isVoiceActive) {
+                    isVoiceActive = true;
+                    try { 
+                        speechEngine.start(); 
+                        toggleMicUI(true);
+                    } catch(e){
+                        console.error("Speech Engine failed to start:", e);
+                        voiceStatusEl.innerHTML = `<span style="color: var(--danger-color)">Error starting speech engine.</span>`;
+                        isVoiceActive = false;
+                    }
+                } else {
+                    isVoiceActive = false;
+                    speechEngine.stop();
+                    toggleMicUI(false);
+                }
+            });
+
+            speechEngine.onresult = function(streamEvent) {
+                if (isSpeakingTTS) return; // Ignore incoming commands while TTS is active
+                if (isGameOverAnnounced) return;
+                
+                const activeIdx = streamEvent.resultIndex;
+                const input = streamEvent.results[activeIdx][0].transcript;
+                
+                // Display received voice in red, bold, and big letters
+                voiceStatusEl.innerHTML = `<span class="voice-heard-highlight">Heard: "${input}"</span>`;
+                
+                interpretVoiceMatrix(input);
+            };
+
+            speechEngine.onend = function() {
+                if (isVoiceActive) {
+                    // Prevent rapid loops to avoid repeatedly querying APIs
+                    setTimeout(() => { 
+                        if (isVoiceActive) {
+                            try { speechEngine.start(); } catch(e){} 
+                        }
+                    }, 400);
+                } else {
+                    toggleMicUI(false);
+                }
+            };
+
+            speechEngine.onerror = function(e) {
+                if (e.error === 'not-allowed') {
+                    isVoiceActive = false;
+                    toggleMicUI(false);
+                    voiceStatusEl.textContent = "Mic access blocked by browser privacy rules.";
+                }
+            };
+        }
+
+        function toggleMicUI(active) {
+            if (active) {
+                voiceBtn.textContent = "Turn Voice Control OFF";
+                voiceBtn.className = "btn-active-mic";
+                voiceWidget.classList.add('voice-active');
+                voiceStatusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">Voice standby. Say <b>"Turn on voice"</b> to unlock.</span>`;
+            } else {
+                voiceBtn.textContent = "Turn Voice Control ON";
+                voiceBtn.className = "btn-primary";
+                voiceWidget.classList.remove('voice-active');
+                voiceStatusEl.innerHTML = `<span style="color: var(--text-muted);">Voice engine offline.</span>`;
+                voiceCommandsListening = false;
+            }
+        }
+
+        // --- Homophone Filtering & Look-Ahead Target Mapping Engine ---
+        function interpretVoiceMatrix(audioString) {
+            let text = audioString.toLowerCase().trim();
+
+            // Wake and Lock Command Filtering
+            if (text.includes("turn on voice") || text.includes("start voice") || text.includes("voice on")) {
+                voiceCommandsListening = true;
+                voiceStatusEl.innerHTML = `<span class="voice-heard-highlight">Voice Active</span>`;
+                speakText("Voice control activated. Ready for moves.");
+                return;
+            }
+
+            if (text.includes("turn off voice") || text.includes("stop voice") || text.includes("voice off")) {
+                voiceCommandsListening = false;
+                voiceStatusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">Voice standby. Say <b>"Turn on voice"</b> to unlock.</span>`;
+                speakText("Voice control deactivated.");
+                return;
+            }
+
+            // Reject movements if voice parsing is standby
+            if (!voiceCommandsListening) {
+                voiceStatusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">Locked. Say <b>"Turn on voice"</b> first.</span>`;
+                return;
+            }
+
+            // Resign Voice Command trigger
+            if (text === "resign" || text === "i resign" || text === "surrender" || text === "forfeit") {
+                const resigningColor = (myRole === 'guest') ? 'black' : 'white';
+                triggerResign(resigningColor);
+                return;
+            }
+
+            // Block dynamic user move permissions based on role in Online matches
+            const gameMode = document.getElementById('game-mode').value;
+            if (gameMode === 'online') {
+                if (!isOnlineConnected) {
+                    voiceStatusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">Waiting for connection.</span>`;
+                    return;
+                }
+                if (myRole === 'host' && game.turn() === 'b') {
+                    voiceStatusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">Black's turn.</span>`;
+                    return;
+                }
+                if (myRole === 'guest' && game.turn() === 'w') {
+                    voiceStatusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">White's turn.</span>`;
+                    return;
+                }
+            } else if (gameMode === 'pve' && game.turn() === 'b') {
+                return; // Block speaking on AI turns
+            }
+
+            // Word Clean and Homophone Map
+            const dictionary = {
+                "one":"1", "won":"1", "two":"2", "too":"2", "to":"2", "three":"3", "four":"4", "for":"4", "fore":"4",
+                "five":"5", "six":"6", "seven":"7", "eight":"8", "ate":"8", "see":"c", "sea":"c", "bee":"b", "be":"b",
+                "gee":"g", "king":"k", "queen":"q", "bishop":"b", "rook":"r", "pawn":"", "takes":"", "captures":"", "kills":"", "move":""
+            };
+            
+            text = text.replace(/\bnight\b/g, "n").replace(/\bknight\b/g, "n");
+
+            for (let word in dictionary) {
+                text = text.replace(new RegExp("\\b" + word + "\\b", "g"), dictionary[word]);
+            }
+            text = text.replace(/\s+/g, "");
+
+            // Support Castling Shorthands
+            if (text.includes("castlekingside") || text.includes("shortcastle")) { executeVerifiedMove("O-O"); return; }
+            if (text.includes("castlequeenside") || text.includes("longcastle")) { executeVerifiedMove("O-O-O"); return; }
+
+            // Extract Target Coordinates safely from end of string
+            const targetSquareMatch = text.match(/[a-h][1-8]$/);
+            if (!targetSquareMatch) {
+                voiceStatusEl.innerHTML = `<span class="voice-heard-highlight" style="font-size: 14px !important;">Cannot find square: "${audioString}"</span>`;
+                return;
+            }
+            const targetSquare = targetSquareMatch[0];
+
+            // Detect Intent Piece Class Letter Identifier
+            let pieceLetter = 'p'; 
+            if (text.startsWith('r')) pieceLetter = 'r';
+            else if (text.startsWith('n')) pieceLetter = 'n';
+            else if (text.startsWith('b')) pieceLetter = 'b';
+            else if (text.startsWith('q')) pieceLetter = 'q';
+            else if (text.startsWith('k')) pieceLetter = 'k';
+
+            // Scan Legal Moves Array (automatically filters by active player color)
+            const validMoves = game.moves({ verbose: true });
+            let matchedMoves = validMoves.filter(m => m.to === targetSquare && m.piece === pieceLetter);
+
+            // Handle disambiguation errors (e.g., two knights targeting same field)
+            if (matchedMoves.length > 1) {
+                let strictFilter = matchedMoves.filter(m => text.includes(m.from));
+                if (strictFilter.length === 1) matchedMoves = strictFilter;
+                else {
+                    let fileFilter = matchedMoves.filter(m => text.startsWith(m.from[0]) || text.substring(1).startsWith(m.from[0]));
+                    if (fileFilter.length === 1) matchedMoves = fileFilter;
+                }
+            }
+
+            if (matchedMoves.length === 1) {
+                executeVerifiedMove(matchedMoves[0].san);
+            } else if (matchedMoves.length > 1) {
+                voiceStatusEl.innerHTML = `<span class="voice-heard-highlight" style="font-size: 16px !important;">Ambiguous move. Specify piece file.</span>`;
+            } else {
+                // Coordinate lookup fallback (e.g. "e2e4")
+                const fallbackMatch = text.match(/^([a-h][1-8])([a-h][1-8])$/);
+                if (fallbackMatch) {
+                    let fallbackMove = game.move({ from: fallbackMatch[1], to: fallbackMatch[2], promotion: 'q' });
+                    if (fallbackMove) {
+                        board.position(game.fen());
+                        
+                        // Sync move over WebRTC if connected
+                        if (isOnlineConnected) {
+                            conn.send({ type: 'move', san: fallbackMatch[1] + fallbackMatch[2] });
+                        }
+                        commitTurnUpdates();
+                        return;
+                    }
+                }
+                voiceStatusEl.innerHTML = `<span class="voice-heard-highlight" style="font-size: 16px !important;">Illegal Move: "${audioString}"</span>`;
+            }
+        }
+
+        function executeVerifiedMove(sanMoveStr) {
+            game.move(sanMoveStr);
+            board.position(game.fen());
+            
+            if (isOnlineConnected) {
+                conn.send({ type: 'move', san: sanMoveStr });
+            }
+            commitTurnUpdates();
+        }
+
+        // Initialize board clocks on load
+        $(document).ready(function() {
+            // Check if joining an online match via URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinId = urlParams.get('join');
+
+            if (joinId) {
+                document.getElementById('game-mode').value = 'online';
+                document.getElementById('ai-difficulty-group').style.display = 'none';
+                document.getElementById('online-widget').style.display = 'block';
+                
+                myRole = 'guest';
+                voiceStatusEl.textContent = "Connecting to peer host...";
+                
+                peer = new Peer();
+                peer.on('open', (id) => {
+                    console.log('Guest Peer ID:', id);
+                    conn = peer.connect(joinId);
+                    setupConnection(conn);
+                });
+                
+                peer.on('error', (err) => {
+                    console.error(err);
+                    voiceStatusEl.textContent = "Lobby offline or full. Reverting to local PvE.";
+                    myRole = 'local';
+                    document.getElementById('game-mode').value = 'pve';
+                    document.getElementById('ai-difficulty-group').style.display = 'flex';
+                    document.getElementById('online-widget').style.display = 'none';
+                    resetGameWithClocks();
+                });
+            } else {
+                resetGameWithClocks();
+            }
+        });
+    </script>
+</body>
+</html>
