@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Chess Studio AI Pro</title>
+    
+    <!-- Chessboard.js CSS Framework -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #1e222b;
+            --panel-color: #282c34;
+            --accent-color: #00bcd4;
+            --success-color: #2ed573;
+            --danger-color: #ff4757;
+            --text-color: #ffffff;
+            --text-muted: #abb2bf;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--accent-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        /* Top Big Move Display */
+        #big-move-display {
+            font-size: 2.2rem;
+            font-weight: 800;
+            text-align: center;
+            margin: 5px 0 15px 0;
+            color: var(--accent-color);
+            min-height: 2.8rem;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 15px rgba(0,188,212,0.4);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        /* Clocks Container */
+        .clocks-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 430px;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+
+        .clock {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: monospace;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+        }
+
+        .clock.active {
+            border-color: var(--accent-color);
+            background: rgba(0, 188, 212, 0.08);
+            color: var(--text-color);
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.15);
+        }
+
+        .clock.danger {
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+            animation: pulse 1s infinite;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard {
+                grid-template-columns: 430px 1fr;
+            }
+        }
+
+        /* Chessboard Container */
+        .board-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--panel-color);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        #board {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        /* Control Panel Sidebar */
+        .panel {
+            background: var(--panel-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .status-widget {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .status-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .status-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .voice-active {
+            border-left-color: var(--success-color);
+            background: rgba(46, 213, 115, 0.05);
+        }
+
+        /* Action Buttons */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button, select {
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #3a3f4b;
+            color: var(--text-color);
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #1e222b;
+            grid-column: span 2;
+        }
+
+        .btn-active-mic {
+            background: var(--danger-color) !important;
+            color: white !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .btn-danger { background: #4b3238; color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.2); }
+        .btn-danger:hover { background: var(--danger-color); color: white; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        /* Move History Box */
+        .history-container {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            max-height: 120px;
+        }
+
+        .history-log {
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            flex-grow: 1;
+        }
+
+        .history-row {
+            display: grid;
+            grid-template-columns: 35px 1fr 1fr;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .instructions {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            background: rgba(255,255,255,0.02);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Post Game Review Overlay Styling */
+        .review-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 34, 43, 0.96);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .review-content {
+            background: var(--panel-color);
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .close-review {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .close-review:hover {
+            color: var(--danger-color);
+        }
+
+        .accuracy-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            gap: 15px;
+        }
+
+        .accuracy-circle {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 6px solid;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .white-acc { border-color: var(--accent-color); }
+        .black-acc { border-color: var(--success-color); }
+        .acc-val { font-size: 22px; font-weight: 800; }
+        .acc-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+
+        .move-breakdown-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .breakdown-column h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
+
+        .breakdown-column ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 6px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 4px;
+        }
+
+        .badge {
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        .badge-brilliant { background: #15aabf; color: #fff; }
+        .badge-best { background: #2ed573; color: #fff; }
+        .badge-excellent { background: #26de81; color: #fff; opacity: 0.85; }
+        .badge-good { background: #05c46b; color: #fff; opacity: 0.6; }
+        .badge-book { background: #a55eea; color: #fff; }
+        .badge-inaccuracy { background: #f7b731; color: #000; }
+        .badge-mistake { background: #fa8231; color: #fff; }
+        .badge-blunder { background: #eb3b5a; color: #fff; }
+
+        .review-navigator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        #review-explanation {
+            font-size: 13px;
+            margin-top: 15px;
+            border-left: 4px solid var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Voice Chess Studio</h1>
+
+    <!-- Prominent Big Move Display at the Top -->
+    <div id="big-move-display">Ready to Play</div>
+
+    <!-- Match Game Clock Display -->
+    <div class="clocks-container">
+        <div id="white-clock" class="clock">White: --:--</div>
+        <div id="black-clock" class="clock">Black: --:--</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="board-container">
+            <div id="board"></div>
+        </div>
+
+        <div class="panel">
+            <div class="status-widget" id="game-status-widget">
+                <div class="status-title">Match State</div>
+                <div id="game-status" class="status-value">White to move.</div>
+            </div>
+
+            <div class="status-widget" id="voice-status-widget">
+                <div class="status-title">Voice System (Mobile Restarter Active)</div>
+                <div id="voice-status" class="status-value" style="color: var(--text-muted);">Voice engine offline.</div>
+            </div>
+
+            <!-- Timer Type Selection Form -->
+            <div class="form-group">
+                <label for="time-control">Timing Rule</label>
+                <select id="time-control">
+                    <option value="casual" selected>Casual (No Timer)</option>
+                    <option value="60">Bullet (1 + 0)</option>
+                    <option value="180">Blitz (3 + 0)</option>
+                    <option value="300">Blitz (5 + 0)</option>
+                    <option value="600">Rapid (10 + 0)</option>
+                    <option value="1800">Classical (30 + 0)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="ai-difficulty">Opponent AI Intellect</label>
+                <select id="ai-difficulty">
+                    <option value="easy">Easy (Randomizer)</option>
+                    <option value="medium" selected>Medium (Tactical Attacker)</option>
+                    <option value="hard">Hard (2-Ply Minimax Core)</option>
+                </select>
+            </div>
+
+            <div class="btn-grid">
+                <button id="start-voice" class="btn-primary">Turn Voice Control ON</button>
+                <button id="undo-move">Undo Move</button>
+                <button id="flip-board">Flip Board</button>
+                <button id="reset-game" class="btn-danger" style="grid-column: span 2;">Restart Match</button>
+            </div>
+
+            <div class="history-container">
+                <div class="status-title" style="margin-bottom: 3px;">Move Log</div>
+                <div class="history-log" id="history-log"></div>
+            </div>
+
+            <div class="instructions">
+                <strong>Natural Voice Phrasing:</strong><br>
+                • Say piece name + destination: <b>"Rook C2"</b>, <b>"Bishop F4"</b>, <b>"Knight F3"</b>.<br>
+                • Captures work automatically without saying "takes".<br>
+                • For Pawns, just say the square: <b>"E4"</b> or <b>"D5"</b>.
+            </div>
+        </div>
+    </div>
+
+    <!-- Power Review Overlay Panel (initially hidden) -->
+    <div id="review-modal" class="review-overlay" style="display: none;">
+        <div class="review-content">
+            <span class="close-review" id="close-review-btn">&times;</span>
+            <h2 style="margin-top:0; border-bottom: 2px solid rgba(255,255,255,0.05); padding-bottom:10px;">Post-Game Analysis</h2>
+            
+            <div class="accuracy-container">
+                <div class="accuracy-circle white-acc">
+                    <span class="acc-val" id="white-accuracy">--%</span>
+                    <span class="acc-lbl">White Acc.</span>
+                </div>
+                <div class="accuracy-circle black-acc">
+                    <span class="acc-val" id="black-accuracy">--%</span>
+                    <span class="acc-lbl">Black Acc.</span>
+                </div>
+            </div>
+            
+            <div class="move-breakdown-grid">
+                <div class="breakdown-column">
+                    <h3>White Profile</h3>
+                    <ul id="white-breakdown"></ul>
+                </div>
+                <div class="breakdown-column">
+                    <h3>Black Profile</h3>
+                    <ul id="black-breakdown"></ul>
+                </div>
+            </div>
+
+            <div class="review-navigator">
+                <button id="review-prev" class="btn-primary" style="grid-column:auto; width: auto; padding: 8px 15px;">&larr; Prev</button>
+                <span id="review-current-step" style="font-weight:700; font-family: monospace;">Step 0 / 0</span>
+                <button id="review-next" class="btn-primary" style="grid-column:auto; width: auto; padding: 8px 15px;">Next &rarr;</button>
+            </div>
+            <div id="review-explanation" class="instructions">
+                No step selected. Click navigate arrows to run standard evaluations.
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+
+    <script>
+        let game = new Chess();
+        let board = null;
+        let speechEngine = null;
+        let isVoiceActive = false;
+        let isSystemSpeaking = false; // Prevents echo feedback loops
+
+        // Visual Layout Element Bindings
+        const gameStatusEl = document.getElementById('game-status');
+        const voiceStatusEl = document.getElementById('voice-status');
+        const voiceWidget = document.getElementById('voice-status-widget');
+        const historyLogEl = document.getElementById('history-log');
+        const aiDifficultySel = document.getElementById('ai-difficulty');
+        const voiceBtn = document.getElementById('start-voice');
+        const bigMoveDisplayEl = document.getElementById('big-move-display');
+        const timeControlSel = document.getElementById('time-control');
+
+        // Timer State Variables
+        let whiteTime = 0; // seconds
+        let blackTime = 0; // seconds
+        let isTimerActive = false;
+        let gameTimerInterval = null;
+
+        // Post-Game Review Variables
+        let gameReviewMoves = [];
+        let activeReviewIndex = -1;
+
+        // Text-To-Speech (TTS) Engine Output with Echo Blocker Gate
+        function speak(text, callback) {
+            if ('speechSynthesis' in window && text.trim().length > 0) {
+                window.speechSynthesis.cancel(); // Stop playing ongoing voices
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.05;
+                
+                utterance.onstart = function() {
+                    isSystemSpeaking = true;
+                };
+                utterance.onend = function() {
+                    // Added a 600ms grace period to allow physical speaker feedback and echo to clear
+                    setTimeout(() => {
+                        isSystemSpeaking = false;
+                        if (callback) callback();
+                    }, 600);
+                };
+                utterance.onerror = function() {
+                    isSystemSpeaking = false;
+                    if (callback) callback();
+                };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                isSystemSpeaking = false;
+                if (callback) callback();
+            }
+        }
+
+        // Clean SAN into a spoken-word phrase
+        function parseMoveToSpeech(sanMoveStr, pieceChar) {
+            if (sanMoveStr === 'O-O') return "Kingside castle";
+            if (sanMoveStr === 'O-O-O') return "Queenside castle";
+
+            let result = "";
+            let parsed = sanMoveStr;
+
+            // Decode Piece initials
+            if (parsed.startsWith('N')) { result += "Knight "; parsed = parsed.slice(1); }
+            else if (parsed.startsWith('B')) { result += "Bishop "; parsed = parsed.slice(1); }
+            else if (parsed.startsWith('R')) { result += "Rook "; parsed = parsed.slice(1); }
+            else if (parsed.startsWith('Q')) { result += "Queen "; parsed = parsed.slice(1); }
+            else if (parsed.startsWith('K')) { result += "King "; parsed = parsed.slice(1); }
+            else if (pieceChar && pieceChar !== 'p') {
+                const names = { n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
+                result += names[pieceChar] + " ";
+            }
+
+            if (parsed.includes('x')) {
+                result += "takes ";
+                parsed = parsed.replace('x', '');
+            }
+
+            // Clean check notation
+            parsed = parsed.replace('+', ' check').replace('#', ' checkmate');
+
+            // Format coordinates so alphabet is enunciated cleanly
+            let coords = parsed.split('').map(c => {
+                if (c >= 'a' && c <= 'h') return c + " ";
+                return c;
+            }).join('');
+
+            result += coords;
+            return result.trim();
+        }
+
+        // Board Configuration Elements
+        const boardConfig = {
+            draggable: true,
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            onDragStart: handleDragStart,
+            onDrop: handlePieceDrop,
+            onSnapEnd: handleAnimationSync
+        };
+        
+        board = Chessboard('board', boardConfig);
+
+        function handleDragStart(source, piece, position, orientation) {
+            if (game.game_over() || !isTimerActive && timeControlSel.value !== 'casual') {
+                // block moves until clock/casual starts
+                if (game.game_over()) return false;
+            }
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        function handlePieceDrop(source, target) {
+            let moveExecution = game.move({ from: source, to: target, promotion: 'q' });
+            if (moveExecution === null) return 'snapback';
+            
+            triggerTimerOnFirstMove();
+            commitTurnUpdates(moveExecution);
+        }
+
+        function handleAnimationSync() {
+            board.position(game.fen());
+        }
+
+        function triggerTimerOnFirstMove() {
+            if (!isTimerActive && timeControlSel.value !== 'casual') {
+                isTimerActive = true;
+                startClocksLoop();
+            }
+        }
+
+        function commitTurnUpdates(moveObj) {
+            let notation = moveObj ? moveObj.san : "";
+            let speechString = "";
+
+            // Prepare textual move log feedback
+            if (notation) {
+                bigMoveDisplayEl.textContent = notation;
+                const turnName = game.turn() === 'b' ? "White" : "Black";
+                speechString = `${turnName} plays ${parseMoveToSpeech(notation, moveObj.piece)}. `;
+            }
+
+            // Update state metrics safely without independent speech triggers
+            let infoText = ''; 
+            let activeColor = (game.turn() === 'w' ? 'White' : 'Black');
+            
+            if (game.in_checkmate()) {
+                infoText = `Checkmate! ${activeColor === 'White' ? 'AI wins.' : 'You win!'}`;
+                speechString += ` ${infoText}`;
+                stopGameClocks();
+                triggerGameReview();
+            } else if (game.in_draw()) {
+                infoText = 'Match ended in a Draw.';
+                speechString += ` ${infoText}`;
+                stopGameClocks();
+                triggerGameReview();
+            } else {
+                infoText = (game.turn() === 'w') ? "Your turn (White)." : "AI is calculating...";
+                if (game.in_check()) {
+                    infoText += " [CHECK]";
+                    speechString += " Check!";
+                }
+            }
+            gameStatusEl.textContent = infoText;
+
+            renderMoveHistory();
+
+            // Run the audio queue sequentially; let AI take its turn only when speech finishes [1]
+            speak(speechString, function() {
+                if (!game.game_over() && game.turn() === 'b') {
+                    computeAIEngineMove();
+                }
+            });
+        }
+
+        function renderMoveHistory() {
+            historyLogEl.innerHTML = '';
+            const historyData = game.history({ verbose: true });
+            let htmlPayload = '';
+            for (let i = 0; i < historyData.length; i += 2) {
+                htmlPayload += `
+                    <div class="history-row">
+                        <div>${Math.floor(i / 2) + 1}.</div>
+                        <div>${historyData[i] ? historyData[i].san : ''}</div>
+                        <div>${historyData[i+1] ? historyData[i+1].san : ''}</div>
+                    </div>`;
+            }
+            historyLogEl.innerHTML = htmlPayload;
+            historyLogEl.scrollTop = historyLogEl.scrollHeight;
+        }
+
+        function computeAIEngineMove() {
+            if (game.game_over()) return;
+            const strategy = aiDifficultySel.value;
+            const validMoves = game.moves({ verbose: true });
+            let chosenMove = null;
+
+            if (strategy === 'easy' || validMoves.length === 0) {
+                chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+            } else if (strategy === 'medium') {
+                const valueMatrix = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+                validMoves.sort((alpha, beta) => (beta.captured ? valueMatrix[beta.captured] : 0) - (alpha.captured ? valueMatrix[alpha.captured] : 0));
+                chosenMove = validMoves[0];
+            } else if (strategy === 'hard') {
+                let topScore = -Infinity; let candidateMoves = [];
+                const weights = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+                function evalBoard() {
+                    let total = 0;
+                    game.board().forEach(r => r.forEach(s => { if (s) total += (s.color === 'b' ? weights[s.type] : -weights[s.type]); }));
+                    return total;
+                }
+                validMoves.forEach(m => {
+                    game.move(m);
+                    let worstCase = Infinity;
+                    game.moves().forEach(cm => { game.move(cm); let score = evalBoard(); if (score < worstCase) worstCase = score; game.undo(); });
+                    game.undo();
+                    if (worstCase > topScore) { topScore = worstCase; candidateMoves = [m]; }
+                    else if (worstCase === topScore) candidateMoves.push(m);
+                });
+                chosenMove = candidateMoves[Math.floor(Math.random() * candidateMoves.length)] || validMoves[0];
+            }
+
+            if (chosenMove) {
+                game.move(chosenMove);
+                board.position(game.fen());
+                commitTurnUpdates(chosenMove);
+            }
+        }
+
+        function refreshStateIndicators() {
+            let infoText = ''; 
+            let activeColor = (game.turn() === 'w' ? 'White' : 'Black');
+            if (game.in_checkmate()) {
+                infoText = `Checkmate! ${activeColor === 'White' ? 'AI wins.' : 'You win!'}`;
+            } else if (game.in_draw()) {
+                infoText = 'Match ended in a Draw.';
+            } else {
+                infoText = (game.turn() === 'w') ? "Your turn (White)." : "AI is calculating...";
+                if (game.in_check()) infoText += " [CHECK]";
+            }
+            gameStatusEl.textContent = infoText;
+        }
+
+        // --- Dual Chess Clocks Setup & Logic ---
+        function initializeClocks() {
+            stopGameClocks();
+            const option = timeControlSel.value;
+            if (option === 'casual') {
+                $('#white-clock').text("W: Casual");
+                $('#black-clock').text("B: Casual");
+                $('#white-clock').removeClass('active danger');
+                $('#black-clock').removeClass('active danger');
+                isTimerActive = false;
+                return;
+            }
+
+            const totalSeconds = parseInt(option);
+            whiteTime = totalSeconds;
+            blackTime = totalSeconds;
+            isTimerActive = false;
+
+            updateClockUI('w', whiteTime);
+            updateClockUI('b', blackTime);
+            $('#white-clock').addClass('active').removeClass('danger');
+            $('#black-clock').removeClass('active danger');
+        }
+
+        function updateClockUI(player, secondsLeft) {
+            const min = Math.floor(secondsLeft / 60);
+            const sec = secondsLeft % 60;
+            const timeStr = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+            const target = player === 'w' ? '#white-clock' : '#black-clock';
+            const label = player === 'w' ? 'W: ' : 'B: ';
+            $(target).text(label + timeStr);
+
+            if (secondsLeft <= 15) {
+                $(target).addClass('danger');
+            } else {
+                $(target).removeClass('danger');
+            }
+        }
+
+        function startClocksLoop() {
+            gameTimerInterval = setInterval(() => {
+                if (game.game_over()) {
+                    stopGameClocks();
+                    return;
+                }
+
+                if (game.turn() === 'w') {
+                    whiteTime--;
+                    updateClockUI('w', whiteTime);
+                    if (whiteTime <= 0) {
+                        handleTimeForfeit('w');
+                    }
+                } else {
+                    blackTime--;
+                    updateClockUI('b', blackTime);
+                    if (blackTime <= 0) {
+                        handleTimeForfeit('b');
+                    }
+                }
+
+                // Clock active styles sync
+                if (game.turn() === 'w') {
+                    $('#white-clock').addClass('active');
+                    $('#black-clock').removeClass('active');
+                } else {
+                    $('#black-clock').addClass('active');
+                    $('#white-clock').removeClass('active');
+                }
+            }, 1000);
+        }
+
+        function stopGameClocks() {
+            if (gameTimerInterval) {
+                clearInterval(gameTimerInterval);
+                gameTimerInterval = null;
+            }
+        }
+
+        function handleTimeForfeit(loserColor) {
+            stopGameClocks();
+            const winnerText = loserColor === 'w' ? "Black wins on time!" : "White wins on time!";
+            gameStatusEl.textContent = `Time Forfeit! ${winnerText}`;
+            speak(winnerText);
+            triggerGameReview();
+        }
+
+        timeControlSel.addEventListener('change', () => {
+            initializeClocks();
+        });
+
+
+        // --- UI Operations with Voice Output ---
+        document.getElementById('reset-game').addEventListener('click', () => {
+            game.reset();
+            board.start();
+            initializeClocks();
+            bigMoveDisplayEl.textContent = "Ready to Play";
+            renderMoveHistory();
+            refreshStateIndicators();
+            speak("Match restarted. White to move.");
+        });
+
+        document.getElementById('undo-move').addEventListener('click', () => {
+            // Undo 2 steps to rollback both AI and User turns
+            game.undo();
+            game.undo();
+            board.position(game.fen());
+            renderMoveHistory();
+            refreshStateIndicators();
+            bigMoveDisplayEl.textContent = "Move Undone";
+            speak("Move undone.");
+        });
+
+        document.getElementById('flip-board').addEventListener('click', () => {
+            board.flip();
+            speak("Board flipped.");
+        });
+
+
+        // --- Advanced Speech Recognition Logic ---
+        const SpeechRecognitionNative = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognitionNative) {
+            voiceStatusEl.textContent = "Voice profiles unsupported on this device hardware.";
+            voiceBtn.disabled = true;
+        } else {
+            speechEngine = new SpeechRecognitionNative();
+            speechEngine.continuous = true;
+            speechEngine.interimResults = false;
+            speechEngine.lang = 'en-US';
+
+            voiceBtn.addEventListener('click', function() {
+                if (!isVoiceActive) {
+                    isVoiceActive = true;
+                    try { speechEngine.start(); } catch(e){}
+                    toggleMicUI(true);
+                    speak("Voice control activated. Ready for your move.");
+                } else {
+                    isVoiceActive = false;
+                    speechEngine.stop();
+                    toggleMicUI(false);
+                    speak("Voice control deactivated.");
+                }
+            });
+
+            speechEngine.onresult = function(streamEvent) {
+                // If system speech synthesis is speaking, block interpreting inputs to avoid loop feedback
+                if (isSystemSpeaking) return;
+                if (game.turn() === 'b') return; // strictly user speech control
+                
+                const activeIdx = streamEvent.resultIndex;
+                const input = streamEvent.results[activeIdx][0].transcript;
+                voiceStatusEl.textContent = `Heard: "${input}"`;
+                interpretVoiceMatrix(input);
+            };
+
+            speechEngine.onend = function() {
+                if (isVoiceActive) {
+                    setTimeout(() => { try { speechEngine.start(); } catch(e){} }, 250);
+                } else {
+                    toggleMicUI(false);
+                }
+            };
+
+            speechEngine.onerror = function(e) {
+                if (e.error === 'not-allowed') {
+                    isVoiceActive = false;
+                    toggleMicUI(false);
+                    voiceStatusEl.textContent = "Mic access blocked by browser privacy rules.";
+                }
+            };
+        }
+
+        function toggleMicUI(active) {
+            if (active) {
+                voiceBtn.textContent = "Turn Voice Control OFF";
+                voiceBtn.className = "btn-active-mic";
+                voiceWidget.classList.add('voice-active');
+                voiceStatusEl.textContent = "Listening continuously...";
+            } else {
+                voiceBtn.textContent = "Turn Voice Control ON";
+                voiceBtn.className = "btn-primary";
+                voiceWidget.classList.remove('voice-active');
+                voiceStatusEl.textContent = "Voice engine offline.";
+            }
+        }
+
+        function interpretVoiceMatrix(audioString) {
+            let text = audioString.toLowerCase().trim();
+
+            const dictionary = {
+                "one":"1", "won":"1", "two":"2", "too":"2", "to":"2", "three":"3", "four":"4", "for":"4", "fore":"4",
+                "five":"5", "six":"6", "seven":"7", "eight":"8", "ate":"8", "see":"c", "sea":"c", "bee":"b", "be":"b",
+                "gee":"g", "king":"k", "queen":"q", "bishop":"b", "rook":"r", "pawn":"", "takes":"", "captures":"", "kills":"", "move":""
+            };
+            
+            text = text.replace(/\bnight\b/g, "n").replace(/\bknight\b/g, "n");
+
+            for (let word in dictionary) {
+                text = text.replace(new RegExp("\\b" + word + "\\b", "g"), dictionary[word]);
+            }
+            text = text.replace(/\s+/g, "");
+
+            if (text.includes("castlekingside") || text.includes("shortcastle")) { executeVerifiedMove("O-O"); return; }
+            if (text.includes("castlequeenside") || text.includes("longcastle")) { executeVerifiedMove("O-O-O"); return; }
+
+            const targetSquareMatch = text.match(/[a-h][1-8]$/);
+            if (!targetSquareMatch) {
+                voiceStatusEl.textContent = `Could not find valid square target in: "${audioString}"`;
+                return;
+            }
+            const targetSquare = targetSquareMatch[0];
+
+            let pieceLetter = 'p'; 
+            if (text.startsWith('r')) pieceLetter = 'r';
+            else if (text.startsWith('n')) pieceLetter = 'n';
+            else if (text.startsWith('b')) pieceLetter = 'b';
+            else if (text.startsWith('q')) pieceLetter = 'q';
+            else if (text.startsWith('k')) pieceLetter = 'k';
+
+            const validMoves = game.moves({ verbose: true });
+            let matchedMoves = validMoves.filter(m => m.to === targetSquare && m.piece === pieceLetter);
+
+            if (matchedMoves.length > 1) {
+                let strictFilter = matchedMoves.filter(m => text.includes(m.from));
+                if (strictFilter.length === 1) matchedMoves = strictFilter;
+                else {
+                    let fileFilter = matchedMoves.filter(m => text.startsWith(m.from[0]) || text.substring(1).startsWith(m.from[0]));
+                    if (fileFilter.length === 1) matchedMoves = fileFilter;
+                }
+            }
+
+            if (matchedMoves.length === 1) {
+                triggerTimerOnFirstMove();
+                executeVerifiedMove(matchedMoves[0]);
+            } else if (matchedMoves.length > 1) {
+                voiceStatusEl.textContent = "Ambiguous move. Please specify details.";
+            } else {
+                const fallbackMatch = text.match(/^([a-h][1-8])([a-h][1-8])$/);
+                if (fallbackMatch) {
+                    triggerTimerOnFirstMove();
+                    let fallbackMove = game.move({ from: fallbackMatch[1], to: fallbackMatch[2], promotion: 'q' });
+                    if (fallbackMove) {
+                        board.position(game.fen());
+                        commitTurnUpdates(fallbackMove);
+                        return;
+                    }
+                }
+                voiceStatusEl.textContent = `Illegal Move attempted: "${audioString}"`;
+            }
+        }
+
+        function executeVerifiedMove(moveObj) {
+            game.move(moveObj.san);
+            board.position(game.fen());
+            commitTurnUpdates(moveObj);
+        }
+
+        // Initialize display & vocalizations on start
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeClocks();
+            speak("Voice Chess Studio ready.");
+        });
+
+
+        // --- Post-Game Powerful Review & Analysis Logic ---
+        function evaluateBoardPosition(chessInstance) {
+            let total = 0;
+            const scores = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+            
+            chessInstance.board().forEach((row, rIdx) => {
+                row.forEach((square, cIdx) => {
+                    if (square) {
+                        let cellScore = scores[square.type];
+                        // Positional development bonuses
+                        if (square.type === 'n' || square.type === 'b') {
+                            // development bonus from back rows
+                            if (square.color === 'w' && rIdx < 7) cellScore += 2;
+                            if (square.color === 'b' && rIdx > 0) cellScore += 2;
+                        }
+                        if (rIdx >= 3 && rIdx <= 4 && cIdx >= 3 && cIdx <= 4) {
+                            cellScore += 1.5; // active center control bonus
+                        }
+                        total += (square.color === 'w' ? cellScore : -cellScore);
+                    }
+                });
+            });
+            return total;
+        }
+
+        function getQualityCategory(deltaScore, color, totalMoves) {
+            // Absolute delta based on perspective
+            let change = color === 'w' ? deltaScore : -deltaScore;
+
+            if (change >= 10) return { label: "Brilliant", weight: 100, class: "badge-brilliant", desc: "A spectacular finding that alters the balance." };
+            if (change >= 2.5) return { label: "Best", weight: 100, class: "badge-best", desc: "The highest value strategic execution on the field." };
+            if (change >= -0.2) return { label: "Excellent", weight: 100, class: "badge-excellent", desc: "A great development move keeping you stable." };
+            if (change >= -1.2) return { label: "Good", weight: 80, class: "badge-good", desc: "A respectable layout maintaining dynamic equilibrium." };
+            if (change >= -3.5) return { label: "Inaccuracy", weight: 60, class: "badge-inaccuracy", desc: "Slight tactical error. You had more precise paths." };
+            if (change >= -7.0) return { label: "Mistake", weight: 35, class: "badge-mistake", desc: "A clear mistake that gives your opponent an opening." };
+            return { label: "Blunder", weight: 0, class: "badge-blunder", desc: "A critical blunder! You compromised vital material or positioning." };
+        }
+
+        function triggerGameReview() {
+            const rawHistory = game.history({ verbose: true });
+            if (rawHistory.length === 0) return;
+
+            let reviewGame = new Chess();
+            let stepEvaluationHistory = [];
+            
+            let previousEvaluation = evaluateBoardPosition(reviewGame);
+            
+            // Analyze each step in sequence [1]
+            rawHistory.forEach((move, idx) => {
+                reviewGame.move(move.san);
+                let currentEval = evaluateBoardPosition(reviewGame);
+                let delta = currentEval - previousEvaluation;
+                
+                let quality = getQualityCategory(delta, move.color, rawHistory.length);
+                
+                // Set first 4 moves of the match to "Book" theory automatically
+                if (idx < 4 && quality.weight >= 80) {
+                    quality = { label: "Book", weight: 100, class: "badge-book", desc: "Standard opening theory." };
+                }
+
+                stepEvaluationHistory.push({
+                    pointer: idx,
+                    fen: reviewGame.fen(),
+                    moveNum: Math.floor(idx / 2) + 1,
+                    san: move.san,
+                    color: move.color,
+                    piece: move.piece,
+                    eval: currentEval,
+                    quality: quality
+                });
+
+                previousEvaluation = currentEval;
+            });
+
+            gameReviewMoves = stepEvaluationHistory;
+            activeReviewIndex = gameReviewMoves.length - 1;
+
+            // Compute Game Accuracy metrics
+            let whiteMoveScores = [];
+            let blackMoveScores = [];
+            let wProfile = { brilliant: 0, best: 0, excellent: 0, book: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+            let bProfile = { brilliant: 0, best: 0, excellent: 0, book: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+
+            gameReviewMoves.forEach(m => {
+                const label = m.quality.label.toLowerCase();
+                if (m.color === 'w') {
+                    whiteMoveScores.push(m.quality.weight);
+                    wProfile[label]++;
+                } else {
+                    blackMoveScores.push(m.quality.weight);
+                    bProfile[label]++;
+                }
+            });
+
+            // Calculate accuracy percentages
+            const whiteAccuracyVal = whiteMoveScores.length ? Math.round(whiteMoveScores.reduce((a,b)=>a+b, 0) / whiteMoveScores.length) : 100;
+            const blackAccuracyVal = blackMoveScores.length ? Math.round(blackMoveScores.reduce((a,b)=>a+b, 0) / blackMoveScores.length) : 100;
+
+            // Render stats into review interface
+            document.getElementById('white-accuracy').textContent = `${whiteAccuracyVal}%`;
+            document.getElementById('black-accuracy').textContent = `${blackAccuracyVal}%`;
+
+            // Display Profiles
+            renderProfileList('white-breakdown', wProfile);
+            renderProfileList('black-breakdown', bProfile);
+
+            // Open Review Modal Overlay
+            $('#review-modal').css({ display: 'flex', opacity: 0 }).animate({ opacity: 1 }, 300);
+            updateReviewStepDisplay();
+            speak("Analysis report ready.");
+        }
+
+        function renderProfileList(elementId, profileObj) {
+            const listEl = document.getElementById(elementId);
+            listEl.innerHTML = `
+                <li class="breakdown-item"><span>Brilliants</span> <span class="badge badge-brilliant">${profileObj.brilliant}</span></li>
+                <li class="breakdown-item"><span>Best Moves</span> <span class="badge badge-best">${profileObj.best}</span></li>
+                <li class="breakdown-item"><span>Excellent</span> <span class="badge badge-excellent">${profileObj.excellent}</span></li>
+                <li class="breakdown-item"><span>Book</span> <span class="badge badge-book">${profileObj.book}</span></li>
+                <li class="breakdown-item"><span>Good</span> <span class="badge badge-good">${profileObj.good}</span></li>
+                <li class="breakdown-item"><span>Inaccuracies</span> <span class="badge badge-inaccuracy">${profileObj.inaccuracy}</span></li>
+                <li class="breakdown-item"><span>Mistakes</span> <span class="badge badge-mistake">${profileObj.mistake}</span></li>
+                <li class="breakdown-item"><span>Blunders</span> <span class="badge badge-blunder">${profileObj.blunder}</span></li>
+            `;
+        }
+
+        function updateReviewStepDisplay() {
+            if (activeReviewIndex < 0 || activeReviewIndex >= gameReviewMoves.length) return;
+            const step = gameReviewMoves[activeReviewIndex];
+
+            // Sync main chess board state with selected step [1]
+            board.position(step.fen);
+
+            // Populate navigation values
+            document.getElementById('review-current-step').textContent = `Step ${activeReviewIndex + 1} / ${gameReviewMoves.length}`;
+            
+            const explanationEl = document.getElementById('review-explanation');
+            const turnLabel = step.color === 'w' ? 'White' : 'Black';
+
+            explanationEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <strong>Move ${step.moveNum}: ${turnLabel} played ${step.san}</strong>
+                    <span class="badge ${step.quality.class}">${step.quality.label}</span>
+                </div>
+                <div style="font-size:12px; color: var(--text-muted); line-height: 1.4;">
+                    ${step.quality.desc} (Local positional score eval: <b>${step.eval.toFixed(1)}</b>)
+                </div>
+            `;
+        }
+
+        // Close post-game review panel
+        document.getElementById('close-review-btn').addEventListener('click', () => {
+            $('#review-modal').fadeOut(250, () => {
+                // Restore board layout state
+                board.position(game.fen());
+            });
+        });
+
+        // Navigation actions inside Post Game Review
+        document.getElementById('review-prev').addEventListener('click', () => {
+            if (activeReviewIndex > 0) {
+                activeReviewIndex--;
+                updateReviewStepDisplay();
+            }
+        });
+
+        document.getElementById('review-next').addEventListener('click', () => {
+            if (activeReviewIndex < gameReviewMoves.length - 1) {
+                activeReviewIndex++;
+                updateReviewStepDisplay();
+            }
+        });
+    </script>
+</body>
+</html>
