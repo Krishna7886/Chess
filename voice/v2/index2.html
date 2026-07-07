@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Chess Studio AI Pro</title>
+    
+    <!-- Chessboard.js CSS Framework -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #1e222b;
+            --panel-color: #282c34;
+            --accent-color: #00bcd4;
+            --success-color: #2ed573;
+            --danger-color: #ff4757;
+            --text-color: #ffffff;
+            --text-muted: #abb2bf;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--accent-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard {
+                grid-template-columns: 430px 1fr;
+            }
+        }
+
+        /* Chessboard Container */
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--panel-color);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        #board {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        /* Move Announcer Banner */
+        .announcer-banner {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 12px 6px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        /* Control Panel Sidebar */
+        .panel {
+            background: var(--panel-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .status-widget {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-color);
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .status-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .status-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .voice-active {
+            border-left-color: var(--success-color) !important;
+            background: rgba(46, 213, 115, 0.05);
+        }
+
+        .voice-standby {
+            border-left-color: #ffa500 !important;
+            background: rgba(255, 165, 0, 0.05);
+        }
+
+        /* Action Buttons */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button, select {
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #3a3f4b;
+            color: var(--text-color);
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #1e222b;
+            grid-column: span 2;
+        }
+
+        .btn-active-mic {
+            background: var(--danger-color) !important;
+            color: white !important;
+            animation: pulse 2s infinite;
+            grid-column: span 2;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .btn-danger { background: #4b3238; color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.2); }
+        .btn-danger:hover { background: var(--danger-color); color: white; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        /* Move History Box */
+        .history-container {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            max-height: 120px;
+        }
+
+        .history-log {
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            flex-grow: 1;
+        }
+
+        .history-row {
+            display: grid;
+            grid-template-columns: 35px 1fr 1fr;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .instructions {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            background: rgba(255,255,255,0.02);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Voice Chess Studio</h1>
+
+    <div class="dashboard">
+        <div class="board-container">
+            <div style="width: 100%; max-width: 400px; display: flex; flex-direction: column;">
+                <div id="move-banner" class="announcer-banner">TAP ANYWHERE TO INITIALIZE SYSTEM</div>
+                <div id="board"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="status-widget" id="game-status-widget">
+                <div class="status-title">Match State</div>
+                <div id="game-status" class="status-value">Tap on screen to begin.</div>
+            </div>
+
+            <div class="status-widget" id="voice-status-widget">
+                <div class="status-title">Voice System</div>
+                <div id="voice-status" class="status-value" style="color: var(--text-muted);">Voice engine offline.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ai-difficulty">Opponent AI Intellect</label>
+                <select id="ai-difficulty">
+                    <option value="easy">Easy (Randomizer)</option>
+                    <option value="medium" selected>Medium (Tactical Attacker)</option>
+                    <option value="hard">Hard (2-Ply Minimax Core)</option>
+                </select>
+            </div>
+
+            <div class="btn-grid">
+                <button id="start-voice" class="btn-primary">Turn Voice Control ON</button>
+                <button id="undo-move">Undo Move</button>
+                <button id="flip-board">Flip Board</button>
+                <button id="reset-game" class="btn-danger" style="grid-column: span 2;">Restart Match</button>
+            </div>
+
+            <div class="history-container">
+                <div class="status-title" style="margin-bottom: 3px;">Move Log</div>
+                <div class="history-log" id="history-log"></div>
+            </div>
+
+            <div class="instructions">
+                <strong>Hands-Free Match Flow:</strong><br>
+                • Say <b>"Activate"</b>, <b>"Voice control"</b>, or <b>"Start"</b> to begin listening.<br>
+                • Say piece name + destination: <b>"Rook C2"</b>, <b>"Knight F3"</b>.<br>
+                • For Pawns, just say the destination square: <b>"E4"</b> or <b>"D5"</b>.<br>
+                • <strong>System Voice Commands:</strong><br>
+                • Say <b>"Undo"</b>, <b>"Take back"</b>, or <b>"Go back"</b> to undo.<br>
+                • Say <b>"Flip board"</b> or <b>"Rotate"</b> to change the view.<br>
+                • Say <b>"Restart match"</b> or <b>"Reset"</b> to clear the board.<br>
+                • Say <b>"Easy"</b>, <b>"Medium"</b>, or <b>"Hard"</b> to change difficulty.<br>
+                • Say <b>"Stop listening"</b> or <b>"Voice off"</b> to return to Standby.
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+
+    <script>
+        let game = new Chess();
+        let board = null;
+        let speechEngine = null;
+        
+        // Voice State Manager: 'off' | 'passive' (standby wake-word) | 'active' (continuous commands)
+        let voiceMode = 'off'; 
+        let isListening = false; // Tracks microphone status
+        let lastSpeechEndTime = 0; 
+        let recentlySpokenPhrases = []; 
+        let activeUtterance = null; 
+
+        // Loop protection metrics to suppress fast-refresh loops
+        let lastStartCallTime = 0;
+        let consecutiveFastStarts = 0;
+
+        // Web Audio API Context for synthesized interface sounds
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const gameStatusEl = document.getElementById('game-status');
+        const voiceStatusEl = document.getElementById('voice-status');
+        const voiceWidget = document.getElementById('voice-status-widget');
+        const historyLogEl = document.getElementById('history-log');
+        const aiDifficultySel = document.getElementById('ai-difficulty');
+        const voiceBtn = document.getElementById('start-voice');
+        const bannerEl = document.getElementById('move-banner');
+
+        // Context check to dynamically inject warning banner if loaded over file:// or insecure HTTP protocol
+        if (window.location.protocol === 'file:') {
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = `
+                background: var(--danger-color);
+                color: white;
+                padding: 12px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 13px;
+                max-width: 900px;
+                width: 100%;
+                box-sizing: border-box;
+            `;
+            warningDiv.innerHTML = `⚠️ Web Speech API Blocked: Browsers disable voice controls when running local HTML files directly (file://). Please host this file on a secure server (HTTPS) or run it via a local development server (e.g., Live Server).`;
+            document.body.insertBefore(warningDiv, document.body.firstChild);
+        } else if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = `
+                background: var(--danger-color);
+                color: white;
+                padding: 12px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 13px;
+                max-width: 900px;
+                width: 100%;
+                box-sizing: border-box;
+            `;
+            warningDiv.innerHTML = `⚠️ Insecure Context: Voice recognition is blocked on unencrypted HTTP connections. Please host this page over a secure HTTPS server.`;
+            document.body.insertBefore(warningDiv, document.body.firstChild);
+        }
+
+        const boardConfig = {
+            draggable: true,
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            onDragStart: handleDragStart,
+            onDrop: handlePieceDrop,
+            onSnapEnd: handleAnimationSync
+        };
+        
+        board = Chessboard('board', boardConfig);
+
+        // Activates the voice engine synchronously directly on a user gesture thread (Required by Safari/iOS)
+        const initVoiceEngine = () => {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            gameStatusEl.textContent = "White to move.";
+            
+            if (speechEngine && voiceMode === 'off') {
+                voiceMode = 'passive';
+                updateVoiceUI();
+                
+                // 1. Instantly start recognition in the click-gesture thread
+                startListening();
+                
+                updateBanner("STANDBY: SAY 'ACTIVATE VOICE CONTROLS'", "normal");
+                
+                // 2. Play greeting. Continuous software echo filter handles self-detection.
+                speakText("System initialized. Say 'Activate voice controls' to begin.");
+            }
+            window.removeEventListener('click', initVoiceEngine);
+            window.removeEventListener('touchstart', initVoiceEngine);
+        };
+        window.addEventListener('click', initVoiceEngine);
+        window.addEventListener('touchstart', initVoiceEngine);
+
+        // --- Announcer Banner Helper ---
+        function updateBanner(text, type = 'normal') {
+            bannerEl.textContent = text;
+            if (type === 'success') {
+                bannerEl.style.color = 'var(--success-color)';
+                bannerEl.style.borderColor = 'rgba(46, 213, 115, 0.4)';
+            } else if (type === 'danger') {
+                bannerEl.style.color = 'var(--danger-color)';
+                bannerEl.style.borderColor = 'rgba(255, 71, 87, 0.4)';
+            } else {
+                bannerEl.style.color = 'var(--accent-color)';
+                bannerEl.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            }
+        }
+
+        // --- Sound Generator Core ---
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'move') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+                gainNode.gain.setValueAtTime(0.25, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'capture') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(280, now);
+                osc.frequency.exponentialRampToValueAtTime(90, now + 0.15);
+                gainNode.gain.setValueAtTime(0.35, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'check') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.setValueAtTime(480, now + 0.08);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+                osc.start(now);
+                osc.stop(now + 0.22);
+            } else if (type === 'button') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(850, now);
+                osc.frequency.exponentialRampToValueAtTime(500, now + 0.04);
+                gainNode.gain.setValueAtTime(0.12, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+                osc.start(now);
+                osc.stop(now + 0.04);
+            }
+        }
+
+        // --- Non-Aborting TTS Speech Engine ---
+        function speakText(text, callback) {
+            if ('speechSynthesis' in window) {
+                // Log clean output for matching filter
+                const cleanSpoken = text.toLowerCase().replace(/[^a-z0-9]/g, "");
+                recentlySpokenPhrases.push(cleanSpoken);
+                if (recentlySpokenPhrases.length > 5) {
+                    recentlySpokenPhrases.shift();
+                }
+
+                window.speechSynthesis.cancel();
+
+                activeUtterance = new SpeechSynthesisUtterance(text);
+                activeUtterance.rate = 1.05; 
+                activeUtterance.pitch = 1.0;
+                
+                let runOnce = false;
+                const handleEnd = () => {
+                    if (!runOnce) {
+                        runOnce = true;
+                        lastSpeechEndTime = Date.now(); // Log exact time synthesis finished speaking
+                        if (callback) callback();
+                    }
+                };
+
+                activeUtterance.onend = handleEnd;
+                activeUtterance.onerror = handleEnd;
+
+                // Failsafe timeout protection
+                setTimeout(handleEnd, 6000);
+
+                window.speechSynthesis.speak(activeUtterance);
+            } else {
+                if (callback) callback();
+            }
+        }
+
+        function startListening() {
+            if (!speechEngine || voiceMode === 'off' || isListening) return;
+            
+            // Loop Throttler: Measure time interval between attempts
+            const now = Date.now();
+            if (now - lastStartCallTime < 1000) {
+                consecutiveFastStarts++;
+            } else {
+                consecutiveFastStarts = 0;
+            }
+            lastStartCallTime = now;
+
+            // Halts rapid error loops gracefully to prevent browser memory bloat
+            if (consecutiveFastStarts >= 5) {
+                console.warn("Rapid start attempts detected. Halting loop to protect memory.");
+                voiceMode = 'off';
+                updateVoiceUI();
+                voiceStatusEl.textContent = "Voice halted: insecure connection or permission block.";
+                voiceStatusEl.style.color = "var(--danger-color)";
+                updateBanner("VOICE SYSTEM SUSPENDED", "danger");
+                return;
+            }
+
+            try {
+                speechEngine.start();
+                isListening = true; // Set instantly to protect against race calls
+            } catch(e) {
+                console.warn("Speech start invocation error:", e);
+                isListening = false;
+            }
+        }
+
+        // --- Standard Move to Verbal Translation Map ---
+        function getSpokenMove(move) {
+            const pieceNames = { 'p': 'Pawn', 'n': 'Knight', 'b': 'Bishop', 'r': 'Rook', 'q': 'Queen', 'k': 'King' };
+            const playerStr = move.color === 'w' ? "White" : "Black";
+            
+            if (move.san === "O-O") return `${playerStr} castles kingside`;
+            if (move.san === "O-O-O") return `${playerStr} castles queenside`;
+
+            const target = move.to.toUpperCase();
+            if (move.piece === 'p') {
+                if (move.captured) {
+                    return `${playerStr} pawn on ${move.from[0].toUpperCase()} takes ${target}`;
+                }
+                return `${playerStr} plays pawn to ${target}`;
+            }
+            
+            const piece = pieceNames[move.piece];
+            const action = move.captured ? "takes on" : "to";
+            return `${playerStr} plays ${piece} ${action} ${target}`;
+        }
+
+        function handleDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false;
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        function handlePieceDrop(source, target) {
+            let moveExecution = game.move({ from: source, to: target, promotion: 'q' });
+            if (moveExecution === null) return 'snapback';
+            commitTurnUpdates(moveExecution);
+        }
+
+        function handleAnimationSync() {
+            board.position(game.fen());
+        }
+
+        function commitTurnUpdates(moveExecution) {
+            renderMoveHistory();
+            refreshStateIndicators();
+
+            if (moveExecution) {
+                if (game.in_check()) {
+                    playSound('check');
+                } else if (moveExecution.captured) {
+                    playSound('capture');
+                } else {
+                    playSound('move');
+                }
+
+                // Announce actions to Header Banner
+                let bannerText = `${moveExecution.color === 'w' ? 'WHITE' : 'BLACK'} PLAYED ${moveExecution.san}`;
+                let bannerStyle = 'normal';
+
+                if (game.in_checkmate()) {
+                    bannerText = `CHECKMATE! ${moveExecution.color === 'w' ? 'WHITE WINS!' : 'BLACK WINS!'}`;
+                    bannerStyle = 'success';
+                } else if (game.in_draw()) {
+                    bannerText = "MATCH ENDED IN A DRAW";
+                    bannerStyle = 'normal';
+                } else if (game.in_check()) {
+                    bannerText += " (CHECK!)";
+                    bannerStyle = 'danger';
+                }
+                updateBanner(bannerText, bannerStyle);
+
+                // Prepare Speech Output
+                let announcement = getSpokenMove(moveExecution);
+                if (game.in_checkmate()) {
+                    announcement += `. Checkmate! ${moveExecution.color === 'w' ? 'White wins!' : 'Black wins!'}`;
+                } else if (game.in_draw()) {
+                    announcement += ". The match ended in a draw.";
+                } else if (game.in_check()) {
+                    announcement += ". Check!";
+                }
+
+                speakText(announcement, function() {
+                    if (!game.game_over() && game.turn() === 'b') {
+                        setTimeout(computeAIEngineMove, 450);
+                    }
+                });
+            } else {
+                if (!game.game_over() && game.turn() === 'b') {
+                    setTimeout(computeAIEngineMove, 450);
+                }
+            }
+        }
+
+        function renderMoveHistory() {
+            historyLogEl.innerHTML = '';
+            const historyData = game.history({ verbose: true });
+            let htmlPayload = '';
+            for (let i = 0; i < historyData.length; i += 2) {
+                htmlPayload += `
+                    <div class="history-row">
+                        <div>${Math.floor(i / 2) + 1}.</div>
+                        <div>${historyData[i] ? historyData[i].san : ''}</div>
+                        <div>${historyData[i+1] ? historyData[i+1].san : ''}</div>
+                    </div>`;
+            }
+            historyLogEl.innerHTML = htmlPayload;
+            historyLogEl.scrollTop = historyLogEl.scrollHeight;
+        }
+
+        function computeAIEngineMove() {
+            if (game.game_over()) return;
+            const strategy = aiDifficultySel.value;
+            const validMoves = game.moves({ verbose: true });
+            let chosenMove = null;
+
+            if (strategy === 'easy' || validMoves.length === 0) {
+                chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+            } else if (strategy === 'medium') {
+                const valueMatrix = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+                validMoves.sort((alpha, beta) => (beta.captured ? valueMatrix[beta.captured] : 0) - (alpha.captured ? valueMatrix[alpha.captured] : 0));
+                chosenMove = validMoves[0];
+            } else if (strategy === 'hard') {
+                let topScore = -Infinity; let candidateMoves = [];
+                const weights = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 9000 };
+                function evalBoard() {
+                    let total = 0;
+                    game.board().forEach(r => r.forEach(s => { if (s) total += (s.color === 'b' ? weights[s.type] : -weights[s.type]); }));
+                    return total;
+                }
+                validMoves.forEach(m => {
+                    game.move(m);
+                    let worstCase = Infinity;
+                    game.moves().forEach(cm => { game.move(cm); let score = evalBoard(); if (score < worstCase) worstCase = score; game.undo(); });
+                    game.undo();
+                    if (worstCase > topScore) { topScore = worstCase; candidateMoves = [m]; }
+                    else if (worstCase === topScore) candidateMoves.push(m);
+                });
+                chosenMove = candidateMoves[Math.floor(Math.random() * candidateMoves.length)] || validMoves[0];
+            }
+            
+            const moveResult = game.move(chosenMove);
+            board.position(game.fen());
+            commitTurnUpdates(moveResult);
+        }
+
+        function refreshStateIndicators() {
+            let infoText = ''; let colorAccent = (game.turn() === 'w' ? 'White' : 'Black');
+            if (game.in_checkmate()) infoText = `Checkmate! ${colorAccent === 'White' ? 'AI wins.' : 'You win!'}`;
+            else if (game.in_draw()) infoText = 'Match ended in a Draw.';
+            else { infoText = (game.turn() === 'w') ? "Your turn (White)." : "AI is calculating..."; if (game.in_check()) infoText += " [CHECK]"; }
+            gameStatusEl.textContent = infoText;
+        }
+
+        // --- Buttons Actions ---
+        document.getElementById('reset-game').addEventListener('click', () => {
+            playSound('button');
+            game.reset();
+            board.start();
+            renderMoveHistory();
+            refreshStateIndicators();
+            updateBanner("MATCH STARTED. WHITE'S TURN", "success");
+            speakText("Match restarted. White to move.");
+        });
+
+        document.getElementById('undo-move').addEventListener('click', () => {
+            playSound('button');
+            game.undo(); 
+            game.undo(); 
+            board.position(game.fen());
+            renderMoveHistory();
+            refreshStateIndicators();
+            updateBanner("UNDID LAST TURN", "normal");
+            speakText("Undid last turn.");
+        });
+
+        document.getElementById('flip-board').addEventListener('click', () => {
+            playSound('button');
+            board.flip();
+        });
+
+        aiDifficultySel.addEventListener('change', () => {
+            playSound('button');
+            speakText("Difficulty adjusted to " + aiDifficultySel.value);
+        });
+
+        // --- Voice Engine Systems ---
+        const SpeechRecognitionNative = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognitionNative) {
+            voiceStatusEl.textContent = "Voice profiles unsupported on this device.";
+            voiceBtn.disabled = true;
+        } else {
+            speechEngine = new SpeechRecognitionNative();
+            
+            // False leverages native system utterance-blocks, maximizing stability on mobile WebKit/Blink engines
+            speechEngine.continuous = false; 
+            speechEngine.interimResults = false;
+            speechEngine.lang = 'en-US';
+
+            voiceBtn.addEventListener('click', function() {
+                playSound('button');
+                // Force-initialize synchronous thread if button is clicked before page-wide tap
+                if (voiceMode === 'off') {
+                    initVoiceEngine();
+                    return;
+                }
+
+                if (voiceMode !== 'active') {
+                    voiceMode = 'active';
+                    updateVoiceUI();
+                    updateBanner("VOICE CONTROL ACTIVE", "success");
+                    speakText("Voice control activated.");
+                } else {
+                    voiceMode = 'passive'; 
+                    updateVoiceUI();
+                    updateBanner("STANDBY: SAY 'ACTIVATE VOICE CONTROLS'", "normal");
+                    speakText("Voice control deactivated.");
+                }
+            });
+
+            speechEngine.onstart = function() {
+                isListening = true;
+            };
+
+            speechEngine.onresult = function(streamEvent) {
+                const activeIdx = streamEvent.resultIndex;
+                const input = streamEvent.results[activeIdx][0].transcript;
+                const rawText = input.toLowerCase().trim();
+                const cleanInput = rawText.replace(/[^a-z0-9]/g, "");
+
+                // 1. Native Echo-Barrier: Drop input if browser TTS is currently actively speaking
+                if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                    return;
+                }
+
+                // 2. Echo-Decay Buffer: If speech-synthesis finished speaking less than 2.5s ago, filter feedback
+                const timeSinceSpeechEnd = Date.now() - lastSpeechEndTime;
+                if (timeSinceSpeechEnd < 2500) {
+                    let isEcho = false;
+                    for (let phrase of recentlySpokenPhrases) {
+                        if (cleanInput.includes(phrase) || phrase.includes(cleanInput) || cleanInput.length < 3) {
+                            isEcho = true;
+                            break;
+                        }
+                    }
+                    if (isEcho || timeSinceSpeechEnd < 1200) {
+                        return;
+                    }
+                }
+
+                voiceStatusEl.textContent = `Heard: "${input}"`;
+                interpretVoiceMatrix(input);
+            };
+
+            // Automated continuous cycle restart with a safe 500ms delay
+            speechEngine.onend = function() {
+                isListening = false;
+                if (voiceMode !== 'off') {
+                    setTimeout(() => { 
+                        if (voiceMode !== 'off') {
+                            startListening();
+                        }
+                    }, 500);
+                }
+            };
+
+            speechEngine.onerror = function(e) {
+                isListening = false;
+                console.error("Speech Recognition Error:", e.error);
+
+                // Instantly shut down the loop for fatal context errors
+                if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+                    voiceMode = 'off';
+                    updateVoiceUI();
+                    voiceStatusEl.style.color = "var(--danger-color)";
+                    
+                    if (e.error === 'not-allowed') {
+                        voiceStatusEl.textContent = "Mic permission blocked. Check browser settings!";
+                        updateBanner("MIC ACCESS BLOCKED", "danger");
+                    } else if (e.error === 'service-not-allowed') {
+                        voiceStatusEl.textContent = "Secure context (HTTPS/localhost) required!";
+                        updateBanner("SECURE CONTEXT REQUIRED", "danger");
+                    } else {
+                        voiceStatusEl.textContent = "Microphone busy or not found.";
+                        updateBanner("MIC HARDWARE BUSY", "danger");
+                    }
+                }
+            };
+        }
+
+        function updateVoiceUI() {
+            if (voiceMode === 'active') {
+                voiceBtn.textContent = "Turn Voice Control OFF";
+                voiceBtn.className = "btn-active-mic";
+                voiceWidget.className = "status-widget voice-active";
+                voiceStatusEl.textContent = "Listening continuously for moves...";
+                voiceStatusEl.style.color = "var(--success-color)";
+            } else if (voiceMode === 'passive') {
+                voiceBtn.textContent = "Turn Voice Control ON";
+                voiceBtn.className = "btn-primary";
+                voiceWidget.className = "status-widget voice-standby";
+                voiceStatusEl.textContent = "Standby: Say 'Activate voice controls'";
+                voiceStatusEl.style.color = "#ffa500";
+            } else {
+                voiceBtn.textContent = "Turn Voice Control ON";
+                voiceBtn.className = "btn-primary";
+                voiceWidget.className = "status-widget";
+                voiceStatusEl.textContent = "Voice engine offline.";
+                voiceStatusEl.style.color = "var(--text-muted)";
+            }
+        }
+
+        // --- Homophone Filtering & Look-Ahead Target Mapping Engine ---
+        function interpretVoiceMatrix(audioString) {
+            let rawText = audioString.toLowerCase().trim();
+
+            // Broad fuzzy-phrase wake activation matching
+            const wakeWords = ["activate", "start", "enable", "voice", "listening", "play", "begin", "wake up", "turn on", "turn on voice control"];
+            let isWakeWord = false;
+            for (let word of wakeWords) {
+                if (rawText.includes(word)) {
+                    isWakeWord = true;
+                    break;
+                }
+            }
+
+            if (isWakeWord) {
+                if (voiceMode !== 'active') {
+                    voiceMode = 'active';
+                    updateVoiceUI();
+                    updateBanner("VOICE CONTROL ACTIVE - PLAY YOUR MOVE", "success");
+                    speakText("Voice control activated. Ready for your move.");
+                }
+                return;
+            }
+
+            // Standby Mode Guard
+            if (voiceMode !== 'active') {
+                return;
+            }
+
+            // 1. Process System Control Voice Commands (First, spaces intact)
+            if (rawText.includes("undo") || rawText.includes("take back") || rawText.includes("go back")) {
+                document.getElementById('undo-move').click();
+                return;
+            }
+            if (rawText.includes("flip") || rawText.includes("rotate") || rawText.includes("board flip")) {
+                document.getElementById('flip-board').click();
+                return;
+            }
+            if (rawText.includes("restart") || rawText.includes("reset") || rawText.includes("start over") || rawText.includes("new game")) {
+                document.getElementById('reset-game').click();
+                return;
+            }
+            if (rawText.includes("voice off") || rawText.includes("stop listening") || rawText.includes("disable voice") || rawText.includes("stop voice")) {
+                voiceMode = 'passive';
+                updateVoiceUI();
+                updateBanner("STANDBY: SAY 'ACTIVATE VOICE CONTROLS'", "normal");
+                speakText("Voice control deactivated.");
+                return;
+            }
+            if (rawText.includes("easy") || rawText.includes("difficulty easy") || rawText.includes("mode easy")) {
+                aiDifficultySel.value = 'easy';
+                aiDifficultySel.dispatchEvent(new Event('change'));
+                return;
+            }
+            if (rawText.includes("medium") || rawText.includes("difficulty medium") || rawText.includes("mode medium")) {
+                aiDifficultySel.value = 'medium';
+                aiDifficultySel.dispatchEvent(new Event('change'));
+                return;
+            }
+            if (rawText.includes("hard") || rawText.includes("difficulty hard") || rawText.includes("mode hard") || rawText.includes("expert")) {
+                aiDifficultySel.value = 'hard';
+                aiDifficultySel.dispatchEvent(new Event('change'));
+                return;
+            }
+
+            // 2. Process Chess Move Commands (Phonetic normalization and space stripping)
+            let text = rawText;
+            const dictionary = {
+                "one":"1", "won":"1", "two":"2", "too":"2", "to":"2", "three":"3", "four":"4", "for":"4", "fore":"4",
+                "five":"5", "six":"6", "seven":"7", "eight":"8", "ate":"8", "see":"c", "sea":"c", "bee":"b", "be":"b",
+                "gee":"g", "king":"k", "queen":"q", "bishop":"b", "rook":"r", "pawn":"", "takes":"", "captures":"", "kills":"", "move":""
+            };
+            
+            text = text.replace(/\bnight\b/g, "n").replace(/\bknight\b/g, "n");
+
+            for (let word in dictionary) {
+                text = text.replace(new RegExp("\\b" + word + "\\b", "g"), dictionary[word]);
+            }
+            text = text.replace(/\s+/g, "");
+
+            // Support Castling Shorthands
+            if (text.includes("castlekingside") || text.includes("shortcastle")) { executeVerifiedMove("O-O"); return; }
+            if (text.includes("castlequeenside") || text.includes("longcastle")) { executeVerifiedMove("O-O-O"); return; }
+
+            // Extract Target Coordinates safely from end of string
+            const targetSquareMatch = text.match(/[a-h][1-8]$/);
+            if (!targetSquareMatch) {
+                voiceStatusEl.textContent = `Could not find valid square target in: "${audioString}"`;
+                return;
+            }
+            const targetSquare = targetSquareMatch[0];
+
+            // Detect Intent Piece Class Letter Identifier
+            let pieceLetter = 'p'; 
+            if (text.startsWith('r')) pieceLetter = 'r';
+            else if (text.startsWith('n')) pieceLetter = 'n';
+            else if (text.startsWith('b')) pieceLetter = 'b';
+            else if (text.startsWith('q')) pieceLetter = 'q';
+            else if (text.startsWith('k')) pieceLetter = 'k';
+
+            // Scan Legal Moves Array instead of counting on raw text parsing rules
+            const validMoves = game.moves({ verbose: true });
+            let matchedMoves = validMoves.filter(m => m.to === targetSquare && m.piece === pieceLetter);
+
+            // Handle disambiguation errors (e.g., two knights targeting same field)
+            if (matchedMoves.length > 1) {
+                let strictFilter = matchedMoves.filter(m => text.includes(m.from));
+                if (strictFilter.length === 1) matchedMoves = strictFilter;
+                else {
+                    let fileFilter = matchedMoves.filter(m => text.startsWith(m.from[0]) || text.substring(1).startsWith(m.from[0]));
+                    if (fileFilter.length === 1) matchedMoves = fileFilter;
+                }
+            }
+
+            if (matchedMoves.length === 1) {
+                executeVerifiedMove(matchedMoves[0].san);
+            } else if (matchedMoves.length > 1) {
+                voiceStatusEl.textContent = "Ambiguous move. Please specify which row or column.";
+            } else {
+                // Last ditch coordinate lookup fallback execution path (e.g. "e2e4")
+                const fallbackMatch = text.match(/^([a-h][1-8])([a-h][1-8])$/);
+                if (fallbackMatch) {
+                    let fallbackMove = game.move({ from: fallbackMatch[1], to: fallbackMatch[2], promotion: 'q' });
+                    if (fallbackMove) {
+                        board.position(game.fen());
+                        commitTurnUpdates(fallbackMove);
+                        return;
+                    }
+                }
+                voiceStatusEl.textContent = `Illegal Move attempted: "${audioString}"`;
+            }
+        }
+
+        function executeVerifiedMove(sanMoveStr) {
+            const moveResult = game.move(sanMoveStr);
+            board.position(game.fen());
+            commitTurnUpdates(moveResult);
+        }
+    </script>
+</body>
+</html>
